@@ -1,10 +1,225 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'layout/base.html' %}
 
-</body>
-</html>
+{% block title %}Trang chủ - Đặt phòng khách sạn{% endblock %}
+
+{% block content %}
+
+<section class="hero">
+    <div class="container hero-content">
+        <h1 class="hero-title">Tìm nơi nghỉ dưỡng tiếp theo của bạn</h1>
+        <p>Tìm ưu đãi khách sạn, homestay và nhiều hơn nữa...</p>
+
+        <form action="{{ url_for('tim_kiem') }}" method="GET" class="search-bar">
+            <div class="search-item">
+                <i class="fa-solid fa-bed"></i>
+                <input type="text" name="keyword" placeholder="Bạn muốn đi đâu?" value="{{ keyword if keyword else '' }}">
+            </div>
+
+            <div class="search-item">
+                <i class="fa-solid fa-calendar-days"></i>
+                <div class="search-item-text">
+                    <label>Nhận phòng</label>
+                    <input type="date" name="checkin">
+                </div>
+            </div>
+
+            <div class="search-item">
+                <i class="fa-solid fa-calendar-days"></i>
+                <div class="search-item-text">
+                    <label>Trả phòng</label>
+                    <input type="date" name="checkout">
+                </div>
+            </div>
+
+            <div class="search-item guest-room-selector-wrapper">
+                <i class="fa-solid fa-user-group"></i>
+
+                <div class="guest-room-selector">
+                    <button type="button" class="guest-room-display" id="guestRoomDisplay">
+                        <span id="guestRoomSummary">2 người lớn, 1 phòng</span>
+                        <i class="fa-solid fa-angle-up" id="guestRoomArrow"></i>
+                    </button>
+
+                    <div class="guest-room-dropdown" id="guestRoomDropdown">
+                        <div class="counter-row">
+                            <div class="counter-label">
+                                <i class="fa-solid fa-user"></i>
+                                <span>Người lớn</span>
+                            </div>
+
+                            <div class="counter-controls">
+                                <button type="button" class="counter-btn" id="adultMinus">−</button>
+                                <span id="adultCount">2</span>
+                                <button type="button" class="counter-btn" id="adultPlus">+</button>
+                            </div>
+                        </div>
+
+                        <div class="counter-row">
+                            <div class="counter-label">
+                                <i class="fa-solid fa-door-open"></i>
+                                <span>Phòng</span>
+                            </div>
+
+                            <div class="counter-controls">
+                                <button type="button" class="counter-btn" id="roomMinus">−</button>
+                                <span id="roomCount">1</span>
+                                <button type="button" class="counter-btn" id="roomPlus">+</button>
+                            </div>
+                        </div>
+
+                        <div class="dropdown-actions">
+                            <button type="button" class="done-btn" id="guestRoomDone">Xong</button>
+                        </div>
+                    </div>
+                </div>
+
+                <input type="hidden" name="so_nguoi_lon" id="adultInput" value="2">
+                <input type="hidden" name="so_phong" id="roomInput" value="1">
+            </div>
+
+            <button type="submit" class="search-btn">Tìm kiếm</button>
+        </form>
+    </div>
+</section>
+
+<section class="section container">
+    <div class="section-header">
+        <h2>Điểm đến nổi bật</h2>
+        <p>Khám phá những nơi được nhiều du khách quan tâm</p>
+    </div>
+
+    <div class="destination-grid">
+        <a href="{{ url_for('tim_kiem', keyword='Đà Nẵng', so_nguoi_lon=2, so_phong=1) }}"
+           class="destination-card large"
+           style="background-image: url('{{ url_for('static', filename='images/thanhpho/danang.jpg') }}');">
+            <div class="overlay"></div>
+            <div class="destination-text">
+                <h3>Đà Nẵng</h3>
+                <span>Việt Nam</span>
+            </div>
+        </a>
+
+        <a href="{{ url_for('tim_kiem', keyword='Đà Lạt', so_nguoi_lon=2, so_phong=1) }}"
+           class="destination-card large"
+           style="background-image: url('{{ url_for('static', filename='images/thanhpho/dalat.jpg') }}');">
+            <div class="overlay"></div>
+            <div class="destination-text">
+                <h3>Đà Lạt</h3>
+                <span>Việt Nam</span>
+            </div>
+        </a>
+
+        <a href="{{ url_for('tim_kiem', keyword='Nha Trang', so_nguoi_lon=2, so_phong=1) }}"
+           class="destination-card small"
+           style="background-image: url('{{ url_for('static', filename='images/thanhpho/nhatrang.jpg') }}');">
+            <div class="overlay"></div>
+            <div class="destination-text">
+                <h3>Nha Trang</h3>
+            </div>
+        </a>
+
+        <a href="{{ url_for('tim_kiem', keyword='Hà Nội', so_nguoi_lon=2, so_phong=1) }}"
+           class="destination-card small"
+           style="background-image: url('{{ url_for('static', filename='images/thanhpho/hanoi.jpg') }}');">
+            <div class="overlay"></div>
+            <div class="destination-text">
+                <h3>Hà Nội</h3>
+            </div>
+        </a>
+
+        <a href="{{ url_for('tim_kiem', keyword='TP. Hồ Chí Minh', so_nguoi_lon=2, so_phong=1) }}"
+           class="destination-card small"
+           style="background-image: url('{{ url_for('static', filename='images/thanhpho/hochiminh.jpg') }}');">
+            <div class="overlay"></div>
+            <div class="destination-text">
+                <h3>TP. Hồ Chí Minh</h3>
+            </div>
+        </a>
+    </div>
+</section>
+
+<section class="section section-light">
+    <div class="container">
+        <div class="section-header featured-header">
+            <div>
+                <h2>Khách sạn nổi bật</h2>
+                <p>Các khách sạn có điểm đánh giá trên 8.5</p>
+            </div>
+
+            <div class="featured-nav">
+                <button type="button" class="nav-arrow" id="featuredPrev">
+                    <i class="fa-solid fa-angle-left"></i>
+                </button>
+                <button type="button" class="nav-arrow" id="featuredNext">
+                    <i class="fa-solid fa-angle-right"></i>
+                </button>
+            </div>
+        </div>
+
+        {% if hotel_cards %}
+            <div class="featured-slider-wrapper">
+                <div class="featured-slider-track" id="featuredSliderTrack">
+                    {% for item in hotel_cards %}
+                        <div class="hotel-card featured-slide">
+                            <div class="hotel-image">
+                                {% if item.cover_image %}
+                                    <img
+                                        src="{{ url_for('static', filename=item.cover_image) }}"
+                                        alt="{{ item.hotel.TenKhachSan }}"
+                                        class="hotel-img-real"
+                                    >
+                                {% else %}
+                                    <div class="image-placeholder"></div>
+                                {% endif %}
+                            </div>
+
+                            <div class="hotel-body">
+                                <h3>{{ item.hotel.TenKhachSan }}</h3>
+
+                                <p class="hotel-location">
+                                    <i class="fa-solid fa-location-dot"></i>
+                                    {{ item.hotel.ThanhPho }}
+                                </p>
+
+                                <p class="hotel-address">{{ item.hotel.DiaChi }}</p>
+
+                                <p class="hotel-cancel-policy">
+                                    <strong>Chính sách hủy:</strong>
+                                    {{ item.chinh_sach_huy_text }}
+                                </p>
+
+                                <div class="hotel-meta">
+                                    <span class="rating-badge">{{ item.hotel.DiemDanhGiaTrungBinh }}</span>
+                                    <span class="hotel-review-text">{{ item.review_count }} đánh giá</span>
+                                </div>
+
+                                <div class="hotel-footer">
+                                    <div class="price">
+                                        <small>Từ</small>
+                                        <strong>
+                                            {% if item.min_price %}
+                                                {{ "{:,.0f}".format(item.min_price) }}đ
+                                            {% else %}
+                                                Liên hệ
+                                            {% endif %}
+                                        </strong>
+                                    </div>
+
+                                    <a href="{{ url_for('chi_tiet_khach_san', hotel_id=item.hotel.MaKhachSan) }}" class="btn-view">
+                                        Xem chi tiết
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <div class="empty-box">
+                Hiện chưa có khách sạn nổi bật nào.
+            </div>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}
