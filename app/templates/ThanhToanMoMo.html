@@ -1,0 +1,145 @@
+{% extends 'layout/base.html' %}
+
+
+{% block title %}Thanh toán MoMo{% endblock %}
+
+
+{% block content %}
+<section class="momo-payment-page">
+   <div class="container">
+       <div class="momo-payment-layout">
+
+
+           <main class="momo-payment-main">
+               <div class="momo-card momo-qr-card">
+                   <h1>Quét mã để thanh toán</h1>
+                   <p>Mở ứng dụng MoMo hoặc ngân hàng của bạn và quét mã QR bên dưới để hoàn tất giao dịch.</p>
+
+
+                   <div class="momo-qr-box">
+                       <div class="qr-placeholder">
+                           <i class="fa-solid fa-qrcode"></i>
+                           <span>QR MoMo</span>
+                       </div>
+                   </div>
+
+
+                   <div class="momo-countdown">
+                       <i class="fa-solid fa-clock"></i>
+                       <strong>Thời gian còn lại: <span id="momoCountdown">05:00</span></strong>
+                   </div>
+
+
+                   <div class="momo-booking-info">
+                       <h2>Thông tin đặt phòng</h2>
+
+
+                       <div class="momo-info-grid">
+                           <div>
+                               <span>Khách sạn</span>
+                               <strong>{{ data.hotel.TenKhachSan }}</strong>
+                           </div>
+
+
+                           <div>
+                               <span>Loại phòng</span>
+                               <strong>{{ data.room.TenLoaiPhong }}</strong>
+                           </div>
+
+
+                           <div>
+                               <span>Nhận phòng</span>
+                               <strong>{{ data.checkin }}</strong>
+                           </div>
+
+
+                           <div>
+                               <span>Trả phòng</span>
+                               <strong>{{ data.checkout }}</strong>
+                           </div>
+
+
+                           <div>
+                               <span>Thời gian</span>
+                               <strong>{{ data.so_dem }} đêm</strong>
+                           </div>
+
+
+                           <div>
+                               <span>Số phòng</span>
+                               <strong>{{ data.so_phong }} phòng</strong>
+                           </div>
+                       </div>
+                   </div>
+               </div>
+           </main>
+
+
+           <aside class="momo-payment-side">
+               <div class="momo-card">
+                   <h2>Trạng thái thanh toán</h2>
+
+
+                   <div class="payment-status-box pending">
+                       <span></span>
+                       <strong>Chờ thanh toán</strong>
+                   </div>
+
+
+                   <div class="momo-price-list">
+                       <div>
+                           <span>Tiền phòng</span>
+                           <strong>{{ "{:,.0f}".format(data.tong_tien_phong) }}đ</strong>
+                       </div>
+
+
+                       <div>
+                           <span>Phí dịch vụ</span>
+                           <strong>{{ "{:,.0f}".format(data.phi_dich_vu) }}đ</strong>
+                       </div>
+
+
+                       <div class="momo-total-row">
+                           <span>Tổng thanh toán</span>
+                           <strong>{{ "{:,.0f}".format(data.tong_tien) }}đ</strong>
+                       </div>
+                   </div>
+               </div>
+
+
+               <div class="momo-card">
+                   <h2>Thao tác nhanh</h2>
+
+
+                   <button type="button" class="btn-copy-payment">
+                       Sao chép liên kết thanh toán
+                   </button>
+
+
+                   <a href="{{ url_for('dat_phong',
+                       hotel_id=data.hotel.MaKhachSan,
+                       room_id=data.room.MaLoaiPhong,
+                       checkin=data.checkin,
+                       checkout=data.checkout,
+                       so_nguoi_lon=data.so_nguoi_lon,
+                       so_phong=data.so_phong
+                   ) }}" class="btn-cancel-payment">
+                       Hủy giao dịch
+                   </a>
+               </div>
+
+
+               <div class="secure-checkout-box">
+                   <i class="fa-solid fa-shield-halved"></i>
+                   <div>
+                       <h3>Thanh toán an toàn</h3>
+                       <p>Thông tin thanh toán của bạn được bảo vệ. Hệ thống không lưu thông tin ngân hàng của bạn.</p>
+                   </div>
+               </div>
+           </aside>
+
+
+       </div>
+   </div>
+</section>
+{% endblock %}
