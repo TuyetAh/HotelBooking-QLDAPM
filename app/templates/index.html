@@ -89,27 +89,31 @@
     </div>
 
     <div class="destination-grid">
-        <a href="{{ url_for('tim_kiem', keyword='Đà Nẵng', so_nguoi_lon=2, so_phong=1) }}"
+        <a href="{{ url_for('tim_kiem',
+            keyword='Đà Nẵng',
+            checkin=today,
+            checkout=tomorrow,
+            so_nguoi_lon=2,
+            so_phong=1
+        ) }}"
            class="destination-card large"
            style="background-image: url('{{ url_for('static', filename='images/thanhpho/danang.jpg') }}');">
             <div class="overlay"></div>
             <div class="destination-text">
                 <h3>Đà Nẵng</h3>
-                <span>Việt Nam</span>
             </div>
         </a>
 
-        <a href="{{ url_for('tim_kiem', keyword='Đà Lạt', so_nguoi_lon=2, so_phong=1) }}"
+        <a href="{{ url_for('tim_kiem', keyword='Đà Lạt', checkin=today, checkout=tomorrow, so_nguoi_lon=2, so_phong=1) }}"
            class="destination-card large"
            style="background-image: url('{{ url_for('static', filename='images/thanhpho/dalat.jpg') }}');">
             <div class="overlay"></div>
             <div class="destination-text">
                 <h3>Đà Lạt</h3>
-                <span>Việt Nam</span>
             </div>
         </a>
 
-        <a href="{{ url_for('tim_kiem', keyword='Nha Trang', so_nguoi_lon=2, so_phong=1) }}"
+        <a href="{{ url_for('tim_kiem', keyword='Nha Trang', checkin=today, checkout=tomorrow, so_nguoi_lon=2, so_phong=1) }}"
            class="destination-card small"
            style="background-image: url('{{ url_for('static', filename='images/thanhpho/nhatrang.jpg') }}');">
             <div class="overlay"></div>
@@ -118,7 +122,7 @@
             </div>
         </a>
 
-        <a href="{{ url_for('tim_kiem', keyword='Hà Nội', so_nguoi_lon=2, so_phong=1) }}"
+        <a href="{{ url_for('tim_kiem', keyword='Hà Nội', checkin=today, checkout=tomorrow, so_nguoi_lon=2, so_phong=1) }}"
            class="destination-card small"
            style="background-image: url('{{ url_for('static', filename='images/thanhpho/hanoi.jpg') }}');">
             <div class="overlay"></div>
@@ -127,7 +131,7 @@
             </div>
         </a>
 
-        <a href="{{ url_for('tim_kiem', keyword='TP. Hồ Chí Minh', so_nguoi_lon=2, so_phong=1) }}"
+        <a href="{{ url_for('tim_kiem', keyword='TP. Hồ Chí Minh', checkin=today, checkout=tomorrow, so_nguoi_lon=2, so_phong=1) }}"
            class="destination-card small"
            style="background-image: url('{{ url_for('static', filename='images/thanhpho/hochiminh.jpg') }}');">
             <div class="overlay"></div>

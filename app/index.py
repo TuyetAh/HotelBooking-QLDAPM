@@ -1,7 +1,15 @@
 from flask import render_template, request, redirect, url_for, session, flash
 from functools import wraps
 from app import create_app
-
+import math
+from datetime import date, timedelta
+from app.dao import (
+    build_hotel_card_data,
+    get_featured_hotels,
+    get_all_amenities,
+    search_hotels_advanced,
+    get_hotel_detail_data
+)
 app = create_app()
 app.secret_key = "hotel_booking_secret_key"
 
@@ -30,34 +38,128 @@ def owner_required(f):
 
 
 # =========================================================
-# TRANG CHỦ — code partner
+# TRANG CHỦ
 # =========================================================
 @app.route("/")
 def index():
-    return render_template("index.html", hotel_cards=[])
+    today = date.today()
+    tomorrow = today + timedelta(days=1)
+    featured_hotels = get_featured_hotels()
+    hotel_cards = [build_hotel_card_data(hotel) for hotel in featured_hotels]
+    return render_template("index.html",
+                           hotel_cards=hotel_cards,
+                           today=today.strftime("%Y-%m-%d"),
+                           tomorrow=tomorrow.strftime("%Y-%m-%d")
+                           )
+
 
 
 # =========================================================
-# TÌM KIẾM — code partner
+# TÌM KIẾM KHÁCH SẠN
 # =========================================================
 @app.route("/tim-kiem")
 def tim_kiem():
-    return render_template("TimKiemKhachSan.html",
-        hotel_cards=[], amenities=[],
-        keyword="", city="", checkin="", checkout="",
-        so_nguoi_lon="2", so_phong="1",
-        gia_tu="", gia_den="", so_sao="",
-        chinh_sach_huy="", sort_by="goi_y",
-        selected_tien_ich=[], total_results=0
+    keyword = request.args.get("keyword", "").strip()
+    city = request.args.get("city", "").strip()
+    checkin = request.args.get("checkin", "").strip()
+    checkout = request.args.get("checkout", "").strip()
+    so_nguoi_lon = request.args.get("so_nguoi_lon", "").strip()
+    so_phong = request.args.get("so_phong", "").strip()
+    gia_tu = request.args.get("gia_tu", "").strip()
+    gia_den = request.args.get("gia_den", "").strip()
+    so_sao = request.args.get("so_sao", "").strip()
+    chinh_sach_huy = request.args.get("chinh_sach_huy", "").strip()
+    sort_by = request.args.get("sort_by", "goi_y").strip()
+
+    tien_ich_ids = request.args.getlist("tien_ich")
+
+    hotels = search_hotels_advanced(
+        keyword=keyword,
+        city=city,
+        checkin=checkin,
+        checkout=checkout,
+        so_nguoi_lon=so_nguoi_lon if so_nguoi_lon else None,
+        so_phong=so_phong if so_phong else None,
+        gia_tu=gia_tu if gia_tu else None,
+        gia_den=gia_den if gia_den else None,
+        so_sao=so_sao if so_sao else None,
+        tien_ich_ids=tien_ich_ids,
+        chinh_sach_huy=chinh_sach_huy if chinh_sach_huy else None,
+        sort_by=sort_by
     )
 
+    hotel_cards = [
+        build_hotel_card_data(
+            hotel,
+            checkin=checkin,
+            checkout=checkout,
+            so_nguoi_lon=so_nguoi_lon,
+            so_phong=so_phong
+        )
+        for hotel in hotels
+    ]
+    amenities = get_all_amenities()
+    page = request.args.get("page", 1, type=int)
+    per_page = 5
+
+    total_results = len(hotel_cards)
+    total_pages = math.ceil(total_results / per_page)
+
+    start = (page - 1) * per_page
+    end = start + per_page
+
+    hotel_cards_page = hotel_cards[start:end]
+
+    if not keyword or not checkin or not checkout:
+        flash("Vui lòng nhập địa điểm, ngày nhận phòng và ngày trả phòng.", "error")
+        return redirect(url_for("index"))
+
+    return render_template(
+        "TimKiemKhachSan.html",
+        hotel_cards=hotel_cards_page,
+        total_results=total_results,
+        page=page,
+        total_pages=total_pages,
+        amenities=amenities,
+        keyword=keyword,
+        city=city,
+        checkin=checkin,
+        checkout=checkout,
+        so_nguoi_lon=so_nguoi_lon or "2",
+        so_phong=so_phong or "1",
+        gia_tu=gia_tu,
+        gia_den=gia_den,
+        so_sao=so_sao,
+        chinh_sach_huy=chinh_sach_huy,
+        sort_by=sort_by,
+        selected_tien_ich=tien_ich_ids
+    )
 
 # =========================================================
-# CHI TIẾT KHÁCH SẠN — code partner
+# CHI TIẾT KHÁCH SẠN
 # =========================================================
 @app.route("/khach-san/<int:hotel_id>")
 def chi_tiet_khach_san(hotel_id):
-    return render_template("ChiTietKhachSan.html", data={})
+    checkin = request.args.get("checkin", "").strip()
+    checkout = request.args.get("checkout", "").strip()
+    so_nguoi_lon = request.args.get("so_nguoi_lon", "2").strip()
+    so_phong = request.args.get("so_phong", "1").strip()
+
+    data = get_hotel_detail_data(
+        hotel_id=hotel_id,
+        checkin=checkin,
+        checkout=checkout,
+        so_nguoi_lon=so_nguoi_lon,
+        so_phong=so_phong
+    )
+    if request.args and (not checkin or not checkout or not so_nguoi_lon or not so_phong):
+        flash("Vui lòng nhập đầy đủ ngày nhận phòng, ngày trả phòng, số người lớn và số phòng.", "error")
+        return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
+    if not data:
+        flash("Không tìm thấy khách sạn.", "error")
+        return redirect(url_for("index"))
+
+    return render_template("ChiTietKhachSan.html", data=data)
 
 
 # =========================================================
