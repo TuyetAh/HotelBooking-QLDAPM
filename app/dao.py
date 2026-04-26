@@ -80,7 +80,72 @@ TRANG_THAI_CHUYEN_TIEN_TEXT = {
     2: "Thất bại"
 }
 
+import unicodedata
 
+
+def remove_vietnamese_accents(text):
+    if not text:
+        return ""
+
+    text = unicodedata.normalize("NFD", text)
+    text = "".join(char for char in text if unicodedata.category(char) != "Mn")
+    text = text.replace("Đ", "D").replace("đ", "d")
+    return text
+
+
+def normalize_search_keyword(keyword):
+    """
+    Chuẩn hóa:
+    - viết hoa/thường
+    - có dấu/không dấu
+    - viết liền/viết cách
+    """
+    if not keyword:
+        return ""
+
+    keyword = keyword.strip().lower()
+    keyword = remove_vietnamese_accents(keyword)
+
+    # bỏ các ký tự dễ gây lệch
+    keyword = keyword.replace(".", "")
+    keyword = keyword.replace("-", "")
+    keyword = keyword.replace("_", "")
+    keyword = " ".join(keyword.split())
+
+    # xử lý các tên đặc biệt
+    keyword_no_space = keyword.replace(" ", "")
+
+    # TP Hồ Chí Minh
+    hcm_aliases = [
+        "tphochiminh",
+        "thanhphohochiminh",
+        "hochiminh",
+        "hcm",
+        "sg",
+        "saigon",
+        "sai gon"
+    ]
+
+    if keyword_no_space in hcm_aliases or keyword in hcm_aliases:
+        return "ho chi minh"
+
+    # Đà Lạt
+    if keyword_no_space in ["dalat", "da lat"]:
+        return "da lat"
+
+    # Đà Nẵng
+    if keyword_no_space in ["danang", "da nang"]:
+        return "da nang"
+
+    # Nha Trang
+    if keyword_no_space in ["nhatrang", "nha trang"]:
+        return "nha trang"
+
+    # Hà Nội
+    if keyword_no_space in ["hanoi", "ha noi"]:
+        return "ha noi"
+
+    return keyword
 # =========================================================
 # 2. HÀM HỖ TRỢ HIỂN THỊ TEXT
 # =========================================================
@@ -1401,14 +1466,28 @@ def search_hotels_advanced(
     )
 
     if keyword:
-        query = query.filter(
-            or_(
-                KhachSan.TenKhachSan.ilike(f"%{keyword}%"),
-                KhachSan.DiaChi.ilike(f"%{keyword}%"),
-                KhachSan.ViTriNoiBat.ilike(f"%{keyword}%"),
-                KhachSan.ThanhPho.ilike(f"%{keyword}%")
-            )
-        )
+        normalized_keyword = normalize_search_keyword(keyword)
+
+        hotels_temp = query.all()
+        matched_hotel_ids = []
+
+        for hotel in hotels_temp:
+            ten_khach_san = normalize_search_keyword(hotel.TenKhachSan)
+            thanh_pho = normalize_search_keyword(hotel.ThanhPho)
+            dia_chi = normalize_search_keyword(hotel.DiaChi)
+            vi_tri_noi_bat = normalize_search_keyword(hotel.ViTriNoiBat)
+
+            searchable_text = f"{ten_khach_san} {thanh_pho} {dia_chi} {vi_tri_noi_bat}"
+            searchable_text_no_space = searchable_text.replace(" ", "")
+            keyword_no_space = normalized_keyword.replace(" ", "")
+
+            if (
+                    normalized_keyword in searchable_text
+                    or keyword_no_space in searchable_text_no_space
+            ):
+                matched_hotel_ids.append(hotel.MaKhachSan)
+
+        query = query.filter(KhachSan.MaKhachSan.in_(matched_hotel_ids))
 
     if city:
         query = query.filter(KhachSan.ThanhPho.ilike(f"%{city}%"))

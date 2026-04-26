@@ -1321,7 +1321,39 @@ a {
         max-height: 200px;
     }
 }
+/*Cho Phân trang */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 28px;
+}
 
+.pagination a {
+    width: 38px;
+    height: 38px;
+    border: 1px solid #d1d5db;
+    background: white;
+    border-radius: 8px;
+    color: #111827;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.pagination a.active {
+    background: #1f2937;
+    color: white;
+    border-color: #1f2937;
+}
+
+.pagination a:hover {
+    border-color: #0d6efd;
+    color: #0d6efd;
+}
 /* ===== CHI TIẾT KHÁCH SẠN ===== */
 .hotel-detail-page {
     padding: 38px 0 70px;

@@ -356,15 +356,64 @@
                         {% endfor %}
                     </div>
 
-                    <div class="fake-pagination">
-                        <button type="button" disabled><i class="fa-solid fa-angle-left"></i></button>
-                        <button type="button" class="active">1</button>
-                        <button type="button">2</button>
-                        <button type="button">3</button>
-                        <button type="button">...</button>
-                        <button type="button">10</button>
-                        <button type="button"><i class="fa-solid fa-angle-right"></i></button>
-                    </div>
+                    {% if total_pages > 1 %}
+                        <div class="pagination">
+                            {% if page > 1 %}
+                                <a href="{{ url_for('tim_kiem',
+                                    keyword=keyword,
+                                    checkin=checkin,
+                                    checkout=checkout,
+                                    so_nguoi_lon=so_nguoi_lon,
+                                    so_phong=so_phong,
+                                    gia_tu=gia_tu,
+                                    gia_den=gia_den,
+                                    so_sao=so_sao,
+                                    chinh_sach_huy=chinh_sach_huy,
+                                    sort_by=sort_by,
+                                    page=page-1
+                                ) }}">
+                                    <i class="fa-solid fa-angle-left"></i>
+                                </a>
+                            {% endif %}
+
+                            {% for p in range(1, total_pages + 1) %}
+                                <a href="{{ url_for('tim_kiem',
+                                    keyword=keyword,
+                                    checkin=checkin,
+                                    checkout=checkout,
+                                    so_nguoi_lon=so_nguoi_lon,
+                                    so_phong=so_phong,
+                                    gia_tu=gia_tu,
+                                    gia_den=gia_den,
+                                    so_sao=so_sao,
+                                    chinh_sach_huy=chinh_sach_huy,
+                                    sort_by=sort_by,
+                                    page=p
+                                ) }}"
+                                   class="{% if p == page %}active{% endif %}">
+                                    {{ p }}
+                                </a>
+                            {% endfor %}
+
+                            {% if page < total_pages %}
+                                <a href="{{ url_for('tim_kiem',
+                                    keyword=keyword,
+                                    checkin=checkin,
+                                    checkout=checkout,
+                                    so_nguoi_lon=so_nguoi_lon,
+                                    so_phong=so_phong,
+                                    gia_tu=gia_tu,
+                                    gia_den=gia_den,
+                                    so_sao=so_sao,
+                                    chinh_sach_huy=chinh_sach_huy,
+                                    sort_by=sort_by,
+                                    page=page+1
+                                ) }}">
+                                    <i class="fa-solid fa-angle-right"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
                 {% else %}
                     <div class="empty-box">
                         Không tìm thấy khách sạn phù hợp với bộ lọc của bạn.
