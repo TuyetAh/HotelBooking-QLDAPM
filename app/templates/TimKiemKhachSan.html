@@ -1,0 +1,377 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Tìm kiếm khách sạn{% endblock %}
+
+{% block content %}
+<section class="search-page">
+    <div class="container">
+        <!-- Thanh tìm kiếm trên cùng -->
+        <div class="search-page-top">
+            <form action="{{ url_for('tim_kiem') }}" method="GET" class="search-bar search-bar-result">
+                <div class="search-item">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <input type="text" name="keyword" placeholder="Bạn muốn đi đâu?" value="{{ keyword }}">
+                </div>
+
+                <div class="search-item">
+                    <i class="fa-solid fa-calendar-days"></i>
+                    <div class="search-item-text">
+                        <label>Nhận phòng</label>
+                        <input type="date" name="checkin" value="{{ checkin }}">
+                    </div>
+                </div>
+
+                <div class="search-item">
+                    <i class="fa-solid fa-calendar-days"></i>
+                    <div class="search-item-text">
+                        <label>Trả phòng</label>
+                        <input type="date" name="checkout" value="{{ checkout }}">
+                    </div>
+                </div>
+
+                <div class="search-item guest-room-selector-wrapper">
+                    <i class="fa-solid fa-user-group"></i>
+
+                    <div class="guest-room-selector">
+                        <button type="button" class="guest-room-display" id="guestRoomDisplay">
+                            <span id="guestRoomSummary">{{ so_nguoi_lon }} người lớn, {{ so_phong }} phòng</span>
+                            <i class="fa-solid fa-angle-up" id="guestRoomArrow"></i>
+                        </button>
+
+                        <div class="guest-room-dropdown" id="guestRoomDropdown">
+                            <div class="counter-row">
+                                <div class="counter-label">
+                                    <i class="fa-solid fa-user"></i>
+                                    <span>Người lớn</span>
+                                </div>
+
+                                <div class="counter-controls">
+                                    <button type="button" class="counter-btn" id="adultMinus">−</button>
+                                    <span id="adultCount">{{ so_nguoi_lon }}</span>
+                                    <button type="button" class="counter-btn" id="adultPlus">+</button>
+                                </div>
+                            </div>
+
+                            <div class="counter-row">
+                                <div class="counter-label">
+                                    <i class="fa-solid fa-door-open"></i>
+                                    <span>Phòng</span>
+                                </div>
+
+                                <div class="counter-controls">
+                                    <button type="button" class="counter-btn" id="roomMinus">−</button>
+                                    <span id="roomCount">{{ so_phong }}</span>
+                                    <button type="button" class="counter-btn" id="roomPlus">+</button>
+                                </div>
+                            </div>
+
+                            <div class="dropdown-actions">
+                                <button type="button" class="done-btn" id="guestRoomDone">Xong</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="so_nguoi_lon" id="adultInput" value="{{ so_nguoi_lon }}">
+                    <input type="hidden" name="so_phong" id="roomInput" value="{{ so_phong }}">
+                </div>
+
+                <button type="submit" class="search-btn">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+            </form>
+        </div>
+
+        <div class="search-page-layout">
+            <!-- Sidebar filter -->
+            <aside class="search-sidebar">
+                <form action="{{ url_for('tim_kiem') }}" method="GET" class="filter-box" id="autoFilterForm">
+                    <!-- giữ lại dữ liệu tìm kiếm trên -->
+                    <input type="hidden" name="keyword" value="{{ keyword }}">
+                    <input type="hidden" name="city" value="{{ city }}">
+                    <input type="hidden" name="checkin" value="{{ checkin }}">
+                    <input type="hidden" name="checkout" value="{{ checkout }}">
+                    <input type="hidden" name="so_nguoi_lon" value="{{ so_nguoi_lon }}">
+                    <input type="hidden" name="so_phong" value="{{ so_phong }}">
+                    <input type="hidden" name="sort_by" value="{{ sort_by }}">
+
+                    <h3>Bộ lọc</h3>
+
+                    <div class="filter-group">
+                        <h4>Khoảng giá mỗi đêm</h4>
+                        <div class="price-filter">
+                            <input type="number" name="gia_tu" placeholder="Từ" value="{{ gia_tu }}" class="auto-submit-input">
+                            <input type="number" name="gia_den" placeholder="Đến" value="{{ gia_den }}" class="auto-submit-input">
+                        </div>
+                    </div>
+
+
+                    <div class="filter-group">
+                        <h4>Mức đánh giá</h4>
+
+                        <label>
+                            {% if so_sao|string == '5' %}
+                                <input type="radio" name="so_sao" value="5" class="auto-submit-change" checked>
+                            {% else %}
+                                <input type="radio" name="so_sao" value="5" class="auto-submit-change">
+                            {% endif %}
+                            Từ 9 điểm trở lên
+                        </label>
+
+                        <label>
+                            {% if so_sao|string == '4' %}
+                                <input type="radio" name="so_sao" value="4" class="auto-submit-change" checked>
+                            {% else %}
+                                <input type="radio" name="so_sao" value="4" class="auto-submit-change">
+                            {% endif %}
+                            Từ 8 điểm trở lên
+                        </label>
+
+                        <label>
+                            {% if so_sao|string == '3' %}
+                                <input type="radio" name="so_sao" value="3" class="auto-submit-change" checked>
+                            {% else %}
+                                <input type="radio" name="so_sao" value="3" class="auto-submit-change">
+                            {% endif %}
+                            Từ 7 điểm trở lên
+                        </label>
+                    </div>
+
+                    <div class="filter-group">
+                        <h4>Chính sách hủy</h4>
+
+                        <label>
+                            {% if chinh_sach_huy|string == '0' %}
+                                <input type="radio" name="chinh_sach_huy" value="0" class="auto-submit-change" checked>
+                            {% else %}
+                                <input type="radio" name="chinh_sach_huy" value="0" class="auto-submit-change">
+                            {% endif %}
+                            Trước 1 ngày
+                        </label>
+
+                        <label>
+                            {% if chinh_sach_huy|string == '1' %}
+                                <input type="radio" name="chinh_sach_huy" value="1" class="auto-submit-change" checked>
+                            {% else %}
+                                <input type="radio" name="chinh_sach_huy" value="1" class="auto-submit-change">
+                            {% endif %}
+                            Trước 3 ngày
+                        </label>
+
+                        <label>
+                            {% if chinh_sach_huy|string == '2' %}
+                                <input type="radio" name="chinh_sach_huy" value="2" class="auto-submit-change" checked>
+                            {% else %}
+                                <input type="radio" name="chinh_sach_huy" value="2" class="auto-submit-change">
+                            {% endif %}
+                            Không cho hủy
+                        </label>
+                    </div>
+
+                    <div class="filter-group">
+                        <h4>Tiện ích</h4>
+                        <div class="amenity-list">
+                            {% for amenity in amenities %}
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        name="tien_ich"
+                                        value="{{ amenity.MaTienIch }}"
+                                        class="auto-submit-change"
+                                        {% if amenity.MaTienIch|string in selected_tien_ich %}checked{% endif %}
+                                    >
+                                    {{ amenity.TenTienIch }}
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="filter-actions">
+                        <a href="{{ url_for('tim_kiem') }}" class="btn-reset-filter">Xóa bộ lọc</a>
+                    </div>
+                </form>
+            </aside>
+
+            <!-- Nội dung kết quả -->
+            <section class="search-results">
+                <div class="results-header">
+                    <div>
+                        <h2>Kết quả tìm kiếm khách sạn</h2>
+                        <p>{{ total_results }} khách sạn phù hợp</p>
+                    </div>
+
+                    <form action="{{ url_for('tim_kiem') }}" method="GET" class="sort-form">
+                        <input type="hidden" name="keyword" value="{{ keyword }}">
+                        <input type="hidden" name="city" value="{{ city }}">
+                        <input type="hidden" name="checkin" value="{{ checkin }}">
+                        <input type="hidden" name="checkout" value="{{ checkout }}">
+                        <input type="hidden" name="so_nguoi_lon" value="{{ so_nguoi_lon }}">
+                        <input type="hidden" name="so_phong" value="{{ so_phong }}">
+                        <input type="hidden" name="gia_tu" value="{{ gia_tu }}">
+                        <input type="hidden" name="gia_den" value="{{ gia_den }}">
+                        <input type="hidden" name="so_sao" value="{{ so_sao }}">
+                        <input type="hidden" name="chinh_sach_huy" value="{{ chinh_sach_huy }}">
+                        {% for item in selected_tien_ich %}
+                            <input type="hidden" name="tien_ich" value="{{ item }}">
+                        {% endfor %}
+
+                        <label for="sort_by">Sắp xếp:</label>
+                        <select name="sort_by" id="sort_by" onchange="this.form.submit()">
+                            <option value="goi_y" {% if sort_by == 'goi_y' %}selected{% endif %}>Gợi ý</option>
+                            <option value="gia_tang" {% if sort_by == 'gia_tang' %}selected{% endif %}>Giá tăng dần</option>
+                            <option value="gia_giam" {% if sort_by == 'gia_giam' %}selected{% endif %}>Giá giảm dần</option>
+                            <option value="diem_danh_gia" {% if sort_by == 'diem_danh_gia' %}selected{% endif %}>Điểm đánh giá cao nhất</option>
+                            <option value="moi_nhat" {% if sort_by == 'moi_nhat' %}selected{% endif %}>Mới nhất</option>
+                        </select>
+                    </form>
+                </div>
+
+                {% if hotel_cards %}
+                    <div class="search-result-list">
+                        {% for item in hotel_cards %}
+                            <div class="search-result-card">
+                                <div class="search-result-image search-result-gallery">
+                                    {% if item.images and item.images|length > 0 %}
+                                        <!-- Ảnh lớn -->
+                                        <div class="gallery-main">
+                                            <img
+                                                src="{{ url_for('static', filename=item.images[0]) }}"
+                                                alt="{{ item.hotel.TenKhachSan }}"
+                                                class="search-result-img-real"
+                                            >
+                                        </div>
+
+                                        <!-- Hàng ảnh nhỏ -->
+                                        <div class="gallery-bottom">
+                                            <div class="gallery-thumb">
+                                                {% if item.images|length > 1 %}
+                                                    <img
+                                                        src="{{ url_for('static', filename=item.images[1]) }}"
+                                                        alt="{{ item.hotel.TenKhachSan }}"
+                                                        class="search-result-img-real"
+                                                    >
+                                                {% else %}
+                                                    <div class="image-placeholder"></div>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="gallery-thumb">
+                                                {% if item.images|length > 2 %}
+                                                    <img
+                                                        src="{{ url_for('static', filename=item.images[2]) }}"
+                                                        alt="{{ item.hotel.TenKhachSan }}"
+                                                        class="search-result-img-real"
+                                                    >
+                                                {% else %}
+                                                    <div class="image-placeholder"></div>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="gallery-thumb gallery-more">
+                                                {% if item.images|length > 3 %}
+                                                    <img
+                                                        src="{{ url_for('static', filename=item.images[3]) }}"
+                                                        alt="{{ item.hotel.TenKhachSan }}"
+                                                        class="search-result-img-real"
+                                                    >
+                                                {% else %}
+                                                    <div class="image-placeholder"></div>
+                                                {% endif %}
+                                                    <a href="{{ url_for('chi_tiet_khach_san', hotel_id=item.hotel.MaKhachSan) }}" class="gallery-overlay">
+                                                        Xem ảnh
+                                                    </a>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <div class="image-placeholder"></div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="search-result-info">
+                                    <div class="result-main">
+                                        <div>
+                                            <h3>{{ item.hotel.TenKhachSan }}</h3>
+                                            <p class="result-location">
+                                                <i class="fa-solid fa-location-dot"></i>
+                                                {{ item.hotel.DiaChi }}, {{ item.hotel.ThanhPho }}
+                                            </p>
+
+                                            <div class="result-amenities">
+                                                {% set visible_amenities = item.hotel.tien_ichs[:3] %}
+                                                {% set hidden_amenities = item.hotel.tien_ichs[3:] %}
+
+                                                {% for amenity in visible_amenities %}
+                                                    <span class="amenity-tag">{{ amenity.TenTienIch }}</span>
+                                                {% endfor %}
+
+                                                {% if hidden_amenities %}
+                                                    <div class="amenity-more-wrapper">
+                                                        <span class="amenity-tag amenity-more-trigger">
+                                                            {{ hidden_amenities|length }}+
+                                                        </span>
+
+                                                        <div class="amenity-popup">
+                                                            <div class="amenity-popup-title">Cơ sở lưu trú này có:</div>
+                                                            <ul>
+                                                                {% for amenity in hidden_amenities %}
+                                                                    <li>{{ amenity.TenTienIch }}</li>
+                                                                {% endfor %}
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+
+                                            <p class="result-policy">
+                                                Bao gồm thuế phí cơ bản · Chính sách hủy: {{ item.chinh_sach_huy_text }}
+                                            </p>
+                                        </div>
+
+                                        <div class="result-score">
+                                            <span class="rating-badge">{{ item.hotel.DiemDanhGiaTrungBinh }}</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="result-bottom">
+                                        <div class="result-price">
+                                            {% if item.min_price %}
+                                                <strong>{{ "{:,.0f}".format(item.min_price) }}đ</strong>
+                                                <small>/ đêm</small>
+                                            {% else %}
+                                                <strong>Liên hệ</strong>
+                                            {% endif %}
+                                        </div>
+
+                                        <a href="{{ url_for('chi_tiet_khach_san',
+                                            hotel_id=item.hotel.MaKhachSan,
+                                            checkin=checkin,
+                                            checkout=checkout,
+                                            so_nguoi_lon=so_nguoi_lon,
+                                            so_phong=so_phong
+                                        ) }}" class="btn-book-now">
+                                            Xem ngay
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="fake-pagination">
+                        <button type="button" disabled><i class="fa-solid fa-angle-left"></i></button>
+                        <button type="button" class="active">1</button>
+                        <button type="button">2</button>
+                        <button type="button">3</button>
+                        <button type="button">...</button>
+                        <button type="button">10</button>
+                        <button type="button"><i class="fa-solid fa-angle-right"></i></button>
+                    </div>
+                {% else %}
+                    <div class="empty-box">
+                        Không tìm thấy khách sạn phù hợp với bộ lọc của bạn.
+                    </div>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+</section>
+{% endblock %}

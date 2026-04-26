@@ -53,12 +53,66 @@ def dang_nhap():
 # =========================================================
 # TÌM KIẾM KHÁCH SẠN
 # =========================================================
-
 @app.route("/tim-kiem")
 def tim_kiem():
+    keyword = request.args.get("keyword", "").strip()
+    city = request.args.get("city", "").strip()
+    checkin = request.args.get("checkin", "").strip()
+    checkout = request.args.get("checkout", "").strip()
+    so_nguoi_lon = request.args.get("so_nguoi_lon", "").strip()
+    so_phong = request.args.get("so_phong", "").strip()
+    gia_tu = request.args.get("gia_tu", "").strip()
+    gia_den = request.args.get("gia_den", "").strip()
+    so_sao = request.args.get("so_sao", "").strip()
+    chinh_sach_huy = request.args.get("chinh_sach_huy", "").strip()
+    sort_by = request.args.get("sort_by", "goi_y").strip()
+
+    tien_ich_ids = request.args.getlist("tien_ich")
+
+    hotels = search_hotels_advanced(
+        keyword=keyword,
+        city=city,
+        checkin=checkin,
+        checkout=checkout,
+        so_nguoi_lon=so_nguoi_lon if so_nguoi_lon else None,
+        so_phong=so_phong if so_phong else None,
+        gia_tu=gia_tu if gia_tu else None,
+        gia_den=gia_den if gia_den else None,
+        so_sao=so_sao if so_sao else None,
+        tien_ich_ids=tien_ich_ids,
+        chinh_sach_huy=chinh_sach_huy if chinh_sach_huy else None,
+        sort_by=sort_by
+    )
+
+    hotel_cards = [
+        build_hotel_card_data(
+            hotel,
+            checkin=checkin,
+            checkout=checkout,
+            so_nguoi_lon=so_nguoi_lon,
+            so_phong=so_phong
+        )
+        for hotel in hotels
+    ]
+    amenities = get_all_amenities()
 
     return render_template(
-        "index.html"
+        "TimKiemKhachSan.html",
+        hotel_cards=hotel_cards,
+        amenities=amenities,
+        keyword=keyword,
+        city=city,
+        checkin=checkin,
+        checkout=checkout,
+        so_nguoi_lon=so_nguoi_lon or "2",
+        so_phong=so_phong or "1",
+        gia_tu=gia_tu,
+        gia_den=gia_den,
+        so_sao=so_sao,
+        chinh_sach_huy=chinh_sach_huy,
+        sort_by=sort_by,
+        selected_tien_ich=tien_ich_ids,
+        total_results=len(hotel_cards)
     )
 
 
