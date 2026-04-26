@@ -1,0 +1,143 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Chỉnh sửa loại phòng{% endblock %}
+
+{% block content %}
+<section class="edit-room-page">
+    <div class="container">
+
+        <div class="edit-room-header">
+            <a href="{{ url_for('quan_ly_loai_phong', hotel_id=data.hotel.MaKhachSan) }}" class="back-link">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+
+            <div>
+                <h1>Chỉnh sửa loại phòng: {{ data.room.TenLoaiPhong }}</h1>
+                <p>{{ data.hotel.TenKhachSan }}</p>
+            </div>
+
+            <div class="edit-room-actions">
+                <a href="{{ url_for('quan_ly_loai_phong', hotel_id=data.hotel.MaKhachSan) }}" class="btn-discard">
+                    Hủy thay đổi
+                </a>
+
+                <button type="submit" form="editRoomForm" class="btn-save-room">
+                    Lưu thay đổi
+                </button>
+            </div>
+        </div>
+
+        <form id="editRoomForm" method="POST" enctype="multipart/form-data">
+            <div class="edit-room-layout">
+
+                <main class="edit-room-main">
+                    <div class="edit-card">
+                        <h2>Thông tin cơ bản</h2>
+
+                        <div class="form-group">
+                            <label>Tên loại phòng</label>
+                            <input type="text" name="ten_loai_phong" value="{{ data.room.TenLoaiPhong }}" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Mô tả</label>
+                            <textarea name="mo_ta" rows="5">{{ data.room.MoTa }}</textarea>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label>Sức chứa tối đa</label>
+                                <input type="number" name="so_nguoi_toi_da" min="1" value="{{ data.room.SoNguoiToiDa }}" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Số lượng phòng</label>
+                                <input type="number" name="so_luong_phong" min="0" value="{{ data.room.SoLuongPhong }}" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Trạng thái</label>
+                            <select name="trang_thai_hoat_dong">
+                                <option value="1" {% if data.room.TrangThaiHoatDong == 1 %}selected{% endif %}>Đang hoạt động</option>
+                                <option value="0" {% if data.room.TrangThaiHoatDong == 0 %}selected{% endif %}>Dừng hoạt động</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="edit-card">
+                        <div class="edit-card-header">
+                            <h2>Ảnh loại phòng</h2>
+
+                            <label class="btn-add-image">
+                                <i class="fa-solid fa-plus"></i>
+                                Thêm ảnh
+                                <input type="file" name="room_images" multiple accept="image/*" hidden>
+                            </label>
+                        </div>
+
+                        <div class="room-image-manage-grid">
+                            {% for image in data.room_images %}
+                                <div class="room-image-manage-item">
+                                    <img src="{{ url_for('static', filename=image.url) }}" alt="{{ data.room.TenLoaiPhong }}">
+
+                                    <form method="POST"
+                                          action="{{ url_for('xoa_anh_loai_phong', hotel_id=data.hotel.MaKhachSan, room_id=data.room.MaLoaiPhong) }}"
+                                          onsubmit="return confirm('Bạn có chắc muốn xóa ảnh này không?');">
+                                        <input type="hidden" name="filename" value="{{ image.filename }}">
+                                        <button type="submit" class="btn-delete-image">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endfor %}
+
+                            {% if not data.room_images %}
+                                <div class="empty-image-box">
+                                    <i class="fa-regular fa-image"></i>
+                                    <span>Chưa có ảnh</span>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <p class="image-help-text">
+                            Ảnh mới sẽ được thêm vào thư mục: <strong>{{ data.room.ThuMucAnh }}</strong>
+                        </p>
+                    </div>
+                </main>
+
+                <aside class="edit-room-side">
+                    <div class="edit-card">
+                        <h2>Giá mỗi đêm</h2>
+
+                        <div class="form-group">
+                            <label>Giá cơ bản</label>
+                            <input type="number" name="gia_moi_dem" min="0" value="{{ data.room.GiaMoiDem }}" required>
+                        </div>
+                    </div>
+
+                    <div class="edit-card">
+                        <h2>Tiện ích</h2>
+
+                        <div class="amenity-edit-list">
+                            {% for amenity in data.all_amenities %}
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        name="tien_ich"
+                                        value="{{ amenity.MaTienIch }}"
+                                        {% if amenity.MaTienIch in data.room_amenity_ids %}checked{% endif %}
+                                    >
+                                    <span>{{ amenity.TenTienIch }}</span>
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </aside>
+
+            </div>
+        </form>
+
+    </div>
+</section>
+{% endblock %}

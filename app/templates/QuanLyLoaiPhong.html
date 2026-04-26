@@ -1,0 +1,168 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Quản lý loại phòng{% endblock %}
+
+{% block content %}
+<section class="room-manage-page">
+    <div class="container">
+
+        <div class="room-manage-header">
+            <div>
+                <h1>Quản lý loại phòng</h1>
+                <p>{{ data.hotel.TenKhachSan }} · {{ data.hotel.DiaChi }}</p>
+            </div>
+
+            <a href="#" class="btn-add-room">
+                <i class="fa-solid fa-plus"></i>
+                Thêm loại phòng
+            </a>
+        </div>
+
+        <div class="room-stat-grid room-stat-grid-7">
+            <div class="room-stat-card">
+                <span>Tổng số loại phòng</span>
+                <strong>{{ data.tong_so_loai_phong }}</strong>
+                <p>Loại phòng đang quản lý</p>
+            </div>
+
+            <div class="room-stat-card">
+                <span>Tổng số phòng</span>
+                <strong>{{ data.tong_so_phong }}</strong>
+                <p>Tổng số phòng của khách sạn</p>
+            </div>
+
+            <div class="room-stat-card">
+                <span>Phòng đang có người ở</span>
+                <strong>{{ data.so_phong_dang_co_nguoi_o }}</strong>
+                <p>Tính theo ngày hôm nay</p>
+            </div>
+
+            <div class="room-stat-card">
+                <span>Phòng hiện đang trống</span>
+                <strong>{{ data.so_phong_trong }}</strong>
+                <p>Có thể tiếp nhận khách mới</p>
+            </div>
+
+            <div class="room-stat-card">
+                <span>Tổng số đơn đặt phòng</span>
+                <strong>{{ data.tong_so_don_dat_phong }}</strong>
+                <p>Tất cả đơn của khách sạn</p>
+            </div>
+
+            <div class="room-stat-card">
+                <span>Đơn đã hủy</span>
+                <strong>{{ data.so_don_da_huy }}</strong>
+                <p>Trạng thái đã hủy</p>
+            </div>
+
+            <div class="room-stat-card">
+                <span>Tổng thu nhập</span>
+                <strong>{{ "{:,.0f}".format(data.tong_thu_nhap) }}đ</strong>
+                <p>Từ đơn đã thanh toán / hoàn thành</p>
+            </div>
+        </div>
+
+        <div class="room-manage-toolbar">
+            <div class="room-search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="roomSearchInput" placeholder="Tìm kiếm loại phòng...">
+            </div>
+
+            <select id="roomStatusFilter">
+                <option value="all">Tất cả trạng thái</option>
+                <option value="1">Đang hoạt động</option>
+                <option value="0">Dừng hoạt động</option>
+            </select>
+        </div>
+
+        <div class="room-table-card">
+            <table class="room-manage-table">
+                <thead>
+                    <tr>
+                        <th>Loại phòng</th>
+                        <th>Giá mỗi đêm</th>
+                        <th>Sức chứa</th>
+                        <th>Số lượng</th>
+                        <th>Trạng thái</th>
+                        <th>Ảnh</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for room in data.room_types %}
+                    <tr class="room-row" data-status="{{ room.TrangThaiHoatDong }}">
+                        <td>
+                            <div class="room-name-cell">
+                                <div class="room-thumb">
+                                    {% if room.first_image %}
+                                        <img src="{{ url_for('static', filename=room.first_image) }}" alt="{{ room.TenLoaiPhong }}">
+                                    {% else %}
+                                        <div class="room-thumb-placeholder"></div>
+                                    {% endif %}
+                                </div>
+
+                                <div>
+                                    <strong>{{ room.TenLoaiPhong }}</strong>
+                                    <p>{{ room.MoTa if room.MoTa else 'Chưa có mô tả.' }}</p>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td>
+                            <strong>{{ "{:,.0f}".format(room.GiaMoiDem) }}đ</strong>
+                        </td>
+
+                        <td>{{ room.SoNguoiToiDa }} người</td>
+
+                        <td>{{ room.SoLuongPhong }} phòng</td>
+
+                        <td>
+                            {% if room.TrangThaiHoatDong == 1 %}
+                                <span class="status-badge active">Đang hoạt động</span>
+                            {% else %}
+                                <span class="status-badge inactive">Dừng hoạt động</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if room.ThuMucAnh %}
+                                <span class="image-folder">{{ room.ThuMucAnh }}</span>
+                            {% else %}
+                                <span class="text-muted">Chưa có ảnh</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <div class="room-actions">
+                                <a href="{{ url_for('chinh_sua_loai_phong', hotel_id=data.hotel.MaKhachSan, room_id=room.MaLoaiPhong) }}" title="Sửa">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </a>
+
+                                <a href="{{ url_for('doi_trang_thai_loai_phong', room_id=room.MaLoaiPhong) }}" title="Đổi trạng thái">
+                                    {% if room.TrangThaiHoatDong == 1 %}
+                                        <i class="fa-solid fa-eye-slash"></i>
+                                    {% else %}
+                                        <i class="fa-solid fa-eye"></i>
+                                    {% endif %}
+                                </a>
+
+                                <a href="#" title="Xóa">
+                                    <i class="fa-solid fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% if not data.room_types %}
+                <div class="empty-room-manage">
+                    Chưa có loại phòng nào cho khách sạn này.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
