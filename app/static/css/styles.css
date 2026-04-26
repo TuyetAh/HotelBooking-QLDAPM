@@ -2203,3 +2203,324 @@ a {
     background: #fee2e2;
     color: #991b1b;
 }
+/*Trang đặt phfong*/
+.booking-page {
+    background: #f4f6f9;
+    padding: 36px 0 70px;
+}
+
+.booking-gallery {
+    display: grid;
+    grid-template-columns: 2fr 1.4fr;
+    gap: 12px;
+    height: 340px;
+    margin-bottom: 28px;
+}
+
+.booking-gallery-main,
+.booking-gallery-side div {
+    background: #d1d5db;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.booking-gallery-main img,
+.booking-gallery-side img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.booking-gallery-side {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.booking-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 28px;
+    align-items: start;
+}
+
+.booking-hotel-title {
+    margin-bottom: 18px;
+}
+
+.booking-hotel-title h1 {
+    font-size: 34px;
+    color: #0f172a;
+    margin-bottom: 6px;
+}
+
+.booking-hotel-title p {
+    color: #64748b;
+}
+
+.booking-box {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 22px;
+    box-shadow: 0 6px 24px rgba(15, 23, 42, 0.06);
+}
+
+.booking-box h2 {
+    font-size: 22px;
+    margin-bottom: 18px;
+}
+
+.booking-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    padding: 18px;
+    background: #f8fafc;
+    border-radius: 14px;
+}
+
+.booking-info-grid span {
+    display: block;
+    color: #6b7280;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+.booking-info-grid strong {
+    display: block;
+    font-size: 18px;
+    color: #111827;
+}
+
+.booking-info-grid small {
+    color: #6b7280;
+}
+
+.room-booking-info {
+    margin-top: 22px;
+}
+
+.room-booking-info h3 {
+    font-size: 22px;
+    margin-bottom: 10px;
+}
+
+.room-booking-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.room-booking-meta span {
+    background: #eff6ff;
+    color: #1d4ed8;
+    padding: 7px 11px;
+    border-radius: 999px;
+    font-size: 13px;
+}
+
+.policy-list {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.policy-list > div {
+    display: flex;
+    gap: 12px;
+}
+
+.policy-list i {
+    color: #059669;
+    font-size: 20px;
+    margin-top: 2px;
+}
+
+.policy-list strong {
+    color: #111827;
+}
+
+.policy-list p {
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+.guest-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+.guest-form-grid label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.guest-form-grid input {
+    width: 100%;
+    height: 44px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 0 12px;
+}
+
+.booking-price-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    position: sticky;
+    top: 90px;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.1);
+}
+
+.booking-price-card h3 {
+    font-size: 20px;
+    margin-bottom: 20px;
+}
+
+.price-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 16px;
+    color: #4b5563;
+}
+
+.price-row strong {
+    color: #111827;
+    white-space: nowrap;
+}
+
+.price-total {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 18px;
+    margin-top: 18px;
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.price-total span {
+    font-weight: 800;
+}
+
+.price-total strong {
+    font-size: 28px;
+    color: #111827;
+    white-space: nowrap;
+}
+
+.btn-proceed-payment {
+    width: 100%;
+    height: 48px;
+    margin-top: 24px;
+    border: none;
+    border-radius: 10px;
+    background: #1f2937;
+    color: white;
+    font-weight: 800;
+    font-family: 'Montserrat', sans-serif;
+    cursor: pointer;
+}
+
+.booking-price-note {
+    text-align: center;
+    margin-top: 12px;
+    color: #6b7280;
+    font-size: 13px;
+}
+
+@media (max-width: 992px) {
+    .booking-gallery,
+    .booking-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .booking-gallery {
+        height: auto;
+    }
+
+    .booking-gallery-main {
+        height: 260px;
+    }
+
+    .booking-gallery-side {
+        height: 260px;
+    }
+
+    .booking-price-card {
+        position: static;
+    }
+
+    .booking-info-grid,
+    .guest-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* của phần ảnh loạiphong trong datphogn */
+.booking-room-gallery-wrapper {
+    margin-top: 22px;
+}
+
+.booking-room-gallery-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+
+.booking-room-gallery-header h4 {
+    font-size: 18px;
+    color: #111827;
+}
+
+.booking-room-gallery-nav {
+    display: flex;
+    gap: 8px;
+}
+
+.booking-room-gallery-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: #eff6ff;
+    color: #0d6efd;
+    cursor: pointer;
+}
+
+.booking-room-gallery-viewport {
+    overflow: hidden;
+    width: 100%;
+}
+
+.booking-room-gallery-track {
+    display: flex;
+    gap: 14px;
+    transition: transform 0.3s ease;
+}
+
+.booking-room-gallery-item {
+    flex: 0 0 calc((100% - 28px) / 3);
+    height: 180px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #d1d5db;
+}
+
+.booking-room-gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.font-mon {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+}
+

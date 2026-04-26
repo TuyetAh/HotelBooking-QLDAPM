@@ -1591,3 +1591,38 @@ def get_available_room_types_by_hotel(hotel_id, checkin=None, checkout=None, so_
             })
 
     return available_rooms
+def get_room_booking_data(hotel_id, room_id, checkin, checkout, so_nguoi_lon=2, so_phong=1):
+    hotel = get_hotel_by_id(hotel_id)
+    room = get_room_type_by_id(room_id)
+
+    if not hotel or not room:
+        return None
+
+    checkin_date = datetime.strptime(checkin, "%Y-%m-%d").date()
+    checkout_date = datetime.strptime(checkout, "%Y-%m-%d").date()
+
+    so_dem = (checkout_date - checkin_date).days
+    so_phong = int(so_phong)
+
+    tong_tien_phong = room.GiaMoiDem * so_dem * so_phong
+    phi_dich_vu = tong_tien_phong * Decimal("0.05")
+    tong_tien = tong_tien_phong + phi_dich_vu
+
+    so_phong_con_trong = tinh_so_phong_con_trong(room, checkin_date, checkout_date)
+
+    return {
+        "hotel": hotel,
+        "room": room,
+        "hotel_images": lay_danh_sach_anh(hotel.ThuMucAnh),
+        "room_images": lay_danh_sach_anh(room.ThuMucAnh),
+        "checkin": checkin,
+        "checkout": checkout,
+        "so_dem": so_dem,
+        "so_nguoi_lon": so_nguoi_lon,
+        "so_phong": so_phong,
+        "so_phong_con_trong": so_phong_con_trong,
+        "tong_tien_phong": tong_tien_phong,
+        "phi_dich_vu": phi_dich_vu,
+        "tong_tien": tong_tien,
+        "chinh_sach_huy_text": hien_thi_chinh_sach_huy(hotel.ChinhSachHuy)
+    }
