@@ -186,6 +186,14 @@ def dat_phong(hotel_id, room_id):
 
     return render_template("DatPhong.html")
 
+# =========================================================
+# THANH TOÁN
+# =========================================================
+@app.route("/thanh-toan/momo/<int:hotel_id>/<int:room_id>")
+def thanh_toan_momo(hotel_id, room_id):
+
+   return render_template("ThanhToanMoMo.html")
+
 
 if __name__ == "__main__":
     app.run(debug=True)

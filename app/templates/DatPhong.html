@@ -176,9 +176,18 @@
                     <strong>{{ "{:,.0f}".format(data.tong_tien) }}đ</strong>
                 </div>
 
-                <button type="button" class="btn-proceed-payment">
-                    Tiếp tục thanh toán
-                </button>
+                <a href="{{ url_for(
+                   'thanh_toan_momo',
+                   hotel_id=data.hotel.MaKhachSan,
+                   room_id=data.room.MaLoaiPhong,
+                   checkin=data.checkin,
+                   checkout=data.checkout,
+                   so_nguoi_lon=data.so_nguoi_lon,
+                   so_phong=data.so_phong
+                ) }}" class="btn-proceed-payment">
+                   Tiếp tục thanh toán
+                </a>
+
 
                 <p class="booking-price-note">
                     Giá đã bao gồm phí cơ bản.

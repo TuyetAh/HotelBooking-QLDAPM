@@ -2524,3 +2524,345 @@ a {
     font-weight: 800;
 }
 
+/* ===== THANH TOÁN MOMO ===== */
+.momo-payment-page {
+   background: #f4f6f9;
+   padding: 42px 0 80px;
+}
+
+
+.momo-payment-layout {
+   display: grid;
+   grid-template-columns: 1fr 360px;
+   gap: 28px;
+   align-items: start;
+}
+
+
+.momo-card {
+   background: #ffffff;
+   border-radius: 18px;
+   padding: 28px;
+   box-shadow: 0 8px 28px rgba(15, 23, 42, 0.08);
+}
+
+
+.momo-qr-card {
+   text-align: center;
+}
+
+
+.momo-qr-card h1 {
+   font-size: 34px;
+   color: #0f172a;
+   margin-bottom: 12px;
+}
+
+
+.momo-qr-card > p {
+   color: #64748b;
+   font-size: 16px;
+   line-height: 1.6;
+   max-width: 560px;
+   margin: 0 auto 28px;
+}
+
+
+.momo-qr-box {
+   width: 380px;
+   height: 380px;
+   border: 1px solid #e5e7eb;
+   border-radius: 20px;
+   margin: 0 auto 26px;
+   padding: 18px;
+   background: #ffffff;
+}
+
+
+.qr-placeholder {
+   width: 100%;
+   height: 100%;
+   border-radius: 16px;
+   background: #f8fafc;
+   border: 2px dashed #cbd5e1;
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   justify-content: center;
+   color: #94a3b8;
+   gap: 12px;
+}
+
+
+.qr-placeholder i {
+   font-size: 84px;
+}
+
+
+.qr-placeholder span {
+   font-weight: 800;
+   font-size: 22px;
+}
+
+
+.momo-countdown {
+   width: 360px;
+   margin: 0 auto 30px;
+   background: #f1f5f9;
+   color: #1f2937;
+   border-radius: 12px;
+   padding: 18px 20px;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   gap: 14px;
+   font-family: 'Montserrat', sans-serif;
+}
+
+
+.momo-countdown i {
+   color: #0d6efd;
+   font-size: 20px;
+}
+
+
+.momo-booking-info {
+   border-top: 1px solid #e5e7eb;
+   padding-top: 24px;
+   text-align: left;
+}
+
+
+.momo-booking-info h2 {
+   font-size: 22px;
+   margin-bottom: 18px;
+   color: #0f172a;
+}
+
+
+.momo-info-grid {
+   display: grid;
+   grid-template-columns: repeat(3, 1fr);
+   gap: 18px;
+}
+
+
+.momo-info-grid div {
+   background: #f8fafc;
+   border-radius: 12px;
+   padding: 16px;
+}
+
+
+.momo-info-grid span {
+   display: block;
+   color: #64748b;
+   font-size: 13px;
+   margin-bottom: 6px;
+}
+
+
+.momo-info-grid strong {
+   color: #0f172a;
+   font-size: 15px;
+}
+
+
+.momo-payment-side {
+   display: flex;
+   flex-direction: column;
+   gap: 22px;
+}
+
+
+.momo-payment-side h2 {
+   font-size: 20px;
+   margin-bottom: 18px;
+   color: #0f172a;
+}
+
+
+.payment-status-box {
+   border-radius: 12px;
+   padding: 16px;
+   margin-bottom: 22px;
+   display: flex;
+   align-items: center;
+   gap: 12px;
+}
+
+
+.payment-status-box.pending {
+   background: #f8fafc;
+   border: 1px solid #e5e7eb;
+}
+
+
+.payment-status-box span {
+   width: 14px;
+   height: 14px;
+   background: #94a3b8;
+   border-radius: 50%;
+}
+
+
+.payment-status-box strong {
+   color: #334155;
+}
+
+
+.momo-price-list {
+   display: flex;
+   flex-direction: column;
+   gap: 14px;
+}
+
+
+.momo-price-list div {
+   display: flex;
+   justify-content: space-between;
+   gap: 16px;
+   color: #64748b;
+}
+
+
+.momo-price-list strong {
+   color: #0f172a;
+   white-space: nowrap;
+}
+
+
+.momo-total-row {
+   border-top: 1px solid #e5e7eb;
+   padding-top: 18px;
+   margin-top: 6px;
+   font-weight: 800;
+}
+
+
+.momo-total-row span {
+   color: #0f172a;
+   font-family: 'Montserrat', sans-serif;
+}
+
+
+.momo-total-row strong {
+   font-size: 26px;
+}
+
+
+.btn-copy-payment,
+.btn-cancel-payment {
+   width: 100%;
+   height: 48px;
+   border-radius: 10px;
+   font-family: 'Montserrat', sans-serif;
+   font-weight: 800;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+}
+
+
+.btn-copy-payment {
+   border: none;
+   background: #e5e7eb;
+   color: #1f2937;
+   margin-bottom: 12px;
+   cursor: pointer;
+}
+
+
+.btn-cancel-payment {
+   border: 1px solid #e5e7eb;
+   color: #334155;
+   background: white;
+}
+
+
+.secure-checkout-box {
+   background: #1f2937;
+   color: white;
+   border-radius: 18px;
+   padding: 24px;
+   display: flex;
+   gap: 16px;
+}
+
+
+.secure-checkout-box i {
+   font-size: 26px;
+   margin-top: 4px;
+}
+
+
+.secure-checkout-box h3 {
+   margin-bottom: 8px;
+}
+
+
+.secure-checkout-box p {
+   color: #cbd5e1;
+   line-height: 1.6;
+   font-size: 14px;
+}
+
+
+@media (max-width: 992px) {
+   .momo-payment-layout {
+       grid-template-columns: 1fr;
+   }
+
+
+   .momo-qr-box {
+       width: 300px;
+       height: 300px;
+   }
+
+
+   .momo-countdown {
+       width: 100%;
+   }
+
+
+   .momo-info-grid {
+       grid-template-columns: 1fr;
+   }
+}
+.btn-proceed-payment {
+   width: 100%;
+   height: 52px;
+   margin-top: 24px;
+   border: none;
+   border-radius: 12px;
+
+
+   background: linear-gradient(135deg, #0d6efd, #3b82f6);
+   color: white;
+
+
+   font-family: 'Montserrat', sans-serif;
+   font-weight: 800;
+   font-size: 16px;
+   text-decoration: none;
+
+
+   display: flex;
+   align-items: center;
+   justify-content: center;
+
+
+   cursor: pointer;
+   transition: all 0.25s ease;
+}
+
+
+.btn-proceed-payment:hover {
+   background: linear-gradient(135deg, #0b5ed7, #2563eb);
+   transform: translateY(-1px);
+   box-shadow: 0 6px 16px rgba(13, 110, 253, 0.25);
+}
+.btn-proceed-payment:active {
+   transform: scale(0.98);
+   box-shadow: none;
+}
