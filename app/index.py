@@ -145,6 +145,39 @@ def quan_ly_khach_san(hotel_id):
 def inject_user():
     return dict(current_user=None)
 
+# =========================================================
+# QUẢN LÝ LOẠI PHONGF CỦA KS
+# =========================================================
+@app.route("/quan-ly/khach-san/<int:hotel_id>/loai-phong")
+def quan_ly_loai_phong(hotel_id):
+
+
+    return render_template("QuanLyLoaiPhong.html")
+
+# =========================================================
+# QUẢN LÝ LOẠI PHONGF CỦA KS, CHỉnh SỬA
+# =========================================================
+@app.route("/quan-ly/khach-san/<int:hotel_id>/loai-phong/<int:room_id>/chinh-sua", methods=["GET", "POST"])
+def chinh_sua_loai_phong(hotel_id, room_id):
+
+    return render_template("ChinhSuaLoaiPhong.html")
+
+# =========================================================
+# QUẢN LÝ LOẠI PHONGF CỦA KS, CHỉnh SỬA, Xóa ảnh
+# =========================================================
+@app.route("/quan-ly/khach-san/<int:hotel_id>/loai-phong/<int:room_id>/xoa-anh", methods=["POST"])
+def xoa_anh_loai_phong(hotel_id, room_id):
+    return redirect(url_for("chinh_sua_loai_phong"))
+
+
+# =========================================================
+# QUẢN LÝ LOẠI PHONGF CỦA KS, CHỉnh SỬA, Xóa ảnh, ĐỔi trạng thái
+# =========================================================
+@app.route("/quan-ly/loai-phong/<int:room_id>/doi-trang-thai")
+def doi_trang_thai_loai_phong(room_id):
+
+    return redirect(url_for("quan_ly_loai_phong"))
+
 
 if __name__ == "__main__":
     app.run(debug=True)
