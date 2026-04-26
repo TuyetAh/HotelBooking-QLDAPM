@@ -121,8 +121,24 @@ def tim_kiem():
 # =========================================================
 @app.route("/khach-san/<int:hotel_id>")
 def chi_tiet_khach_san(hotel_id):
+    checkin = request.args.get("checkin", "").strip()
+    checkout = request.args.get("checkout", "").strip()
+    so_nguoi_lon = request.args.get("so_nguoi_lon", "2").strip()
+    so_phong = request.args.get("so_phong", "1").strip()
 
-    return render_template("ChiTietKhachSan.html")
+    data = get_hotel_detail_data(
+        hotel_id=hotel_id,
+        checkin=checkin,
+        checkout=checkout,
+        so_nguoi_lon=so_nguoi_lon,
+        so_phong=so_phong
+    )
+
+    if not data:
+        flash("Không tìm thấy khách sạn.", "error")
+        return redirect(url_for("index"))
+
+    return render_template("ChiTietKhachSan.html", data=data)
 
 
 

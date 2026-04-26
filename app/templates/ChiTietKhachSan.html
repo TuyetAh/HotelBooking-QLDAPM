@@ -1,0 +1,277 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}{{ data.hotel.TenKhachSan }}{% endblock %}
+
+{% block content %}
+<section class="hotel-detail-page">
+    <div class="container">
+
+        <div class="detail-title">
+            <h1>{{ data.hotel.TenKhachSan }}</h1>
+            <p>
+                <i class="fa-solid fa-location-dot"></i>
+                {{ data.hotel.DiaChi }}, {{ data.hotel.ThanhPho }}
+            </p>
+        </div>
+
+        <div class="detail-gallery {% if data.images|length < 3 %}few-images{% endif %}">
+            <div class="gallery-big">
+                {% if data.images|length > 0 %}
+                    <img src="{{ url_for('static', filename=data.images[0]) }}" alt="{{ data.hotel.TenKhachSan }}">
+                {% else %}
+                    <div class="image-placeholder"></div>
+                {% endif %}
+            </div>
+
+            <div class="gallery-small-grid">
+                {% for i in range(1, 5) %}
+                    <div class="gallery-small-item">
+                        {% if data.images|length > i %}
+                            <img src="{{ url_for('static', filename=data.images[i]) }}" alt="{{ data.hotel.TenKhachSan }}">
+                        {% else %}
+                            <div class="image-placeholder"></div>
+                        {% endif %}
+
+                        {% if i == 4 and data.all_images|length > 0 %}
+                            <button type="button" class="view-all-overlay" id="openHotelGallery">
+                                {% if data.images|length > 5 %}
+                                    +{{ data.images|length - 5 }} ảnh
+                                {% else %}
+                                    Xem ảnh
+                                {% endif %}
+                            </button>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="detail-layout">
+            <div class="detail-main">
+                <div class="detail-section">
+                    <h2>Giới thiệu khách sạn</h2>
+                    <p>{{ data.hotel.MoTa if data.hotel.MoTa else 'Khách sạn hiện chưa có mô tả chi tiết.' }}</p>
+                </div>
+
+                <div class="detail-section">
+                    <h2>Tiện ích khách sạn</h2>
+
+                    {% if data.tien_ichs %}
+                        <div class="detail-amenities">
+                            {% for amenity in data.tien_ichs %}
+                                <div class="detail-amenity-item">
+                                    <i class="fa-solid fa-check"></i>
+                                    <span>{{ amenity.TenTienIch }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p>Chưa có thông tin tiện ích.</p>
+                    {% endif %}
+                </div>
+
+                <div class="detail-section">
+                    <h2>Quy định khách sạn</h2>
+
+                    <div class="hotel-rule-box">
+                        <div>
+                            <h4>Nhận phòng</h4>
+                            <p>Từ 14:00</p>
+                        </div>
+
+                        <div>
+                            <h4>Trả phòng</h4>
+                            <p>Trước 12:00</p>
+                        </div>
+
+                        <div>
+                            <h4>Chính sách hủy</h4>
+                            <p>{{ data.chinh_sach_huy_text }}</p>
+                        </div>
+
+                        <div>
+                            <h4>Quy định khác</h4>
+                            <p>{{ data.hotel.QuyDinhKhachSan if data.hotel.QuyDinhKhachSan else 'Chưa có quy định.' }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="booking-summary-card">
+                <div class="summary-price">
+                    {% if data.min_price %}
+                        <strong>{{ "{:,.0f}".format(data.min_price) }}đ</strong>
+                        <span>/ đêm</span>
+                    {% else %}
+                        <strong>Liên hệ</strong>
+                    {% endif %}
+                </div>
+
+                <div class="summary-rating">
+                    <span>{{ data.hotel.DiemDanhGiaTrungBinh }}</span>
+                    <small>{{ data.review_count }} đánh giá</small>
+                </div>
+
+                <form action="{{ url_for('chi_tiet_khach_san', hotel_id=data.hotel.MaKhachSan) }}" method="GET" class="summary-form">
+                    <label>Ngày nhận phòng</label>
+                    <input type="date" name="checkin" value="{{ data.checkin }}">
+
+                    <label>Ngày trả phòng</label>
+                    <input type="date" name="checkout" value="{{ data.checkout }}">
+
+                    <label>Số người lớn</label>
+                    <input type="number" name="so_nguoi_lon" min="1" value="{{ data.so_nguoi_lon }}">
+
+                    <label>Số phòng</label>
+                    <input type="number" name="so_phong" min="1" value="{{ data.so_phong }}">
+
+                    <button type="submit" class="btn-check-room">
+                        Kiểm tra phòng trống
+                    </button>
+                </form>
+
+                <p class="summary-note">Bạn k bị tính phí khi kiểm tra phòng.</p>
+            </aside>
+        </div>
+
+        <div class="detail-section available-room-section">
+            <h2>Loại phòng còn trống</h2>
+
+            {% if data.room_cards %}
+                <div class="available-room-list">
+                    {% for item in data.room_cards %}
+                        <div class="room-detail-card">
+                            <div class="room-detail-image room-slider" data-total="{{ item.images|length }}">
+                                {% if item.images and item.images|length > 0 %}
+                                    {% for image in item.images %}
+                                        <img
+                                            src="{{ url_for('static', filename=image) }}"
+                                            alt="{{ item.room.TenLoaiPhong }}"
+                                            class="room-slide-img {% if loop.index0 == 0 %}active{% endif %}"
+                                            data-index="{{ loop.index0 }}"
+                                        >
+                                    {% endfor %}
+
+                                    {% if item.images|length > 1 %}
+                                        <button type="button" class="room-slider-btn room-prev">
+                                            <i class="fa-solid fa-chevron-left"></i>
+                                        </button>
+
+                                        <button type="button" class="room-slider-btn room-next">
+                                            <i class="fa-solid fa-chevron-right"></i>
+                                        </button>
+
+                                        <div class="room-slide-count">
+                                            <span class="current-room-slide">1</span>/{{ item.images|length }}
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="image-placeholder"></div>
+                                {% endif %}
+                            </div>
+
+                            <div class="room-detail-info">
+                                <h3>{{ item.room.TenLoaiPhong }}</h3>
+                                <p>{{ item.room.MoTa if item.room.MoTa else 'Chưa có mô tả.' }}</p>
+
+                                <div class="room-info-grid">
+                                    <span><i class="fa-solid fa-user"></i> Tối đa {{ item.room.SoNguoiToiDa }} người</span>
+                                    <span><i class="fa-solid fa-bed"></i> Còn {{ item.so_phong_con_trong }} phòng</span>
+                                </div>
+
+                                {% if item.tien_ichs %}
+                                    <div class="room-amenities">
+                                        {% for amenity in item.tien_ichs[:4] %}
+                                            <span>{{ amenity.TenTienIch }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="room-detail-action">
+                                <strong>{{ "{:,.0f}".format(item.room.GiaMoiDem) }}đ</strong>
+                                <small>/ đêm</small>
+
+                                {% if item.so_phong_con_trong <= 2 %}
+                                    <p class="low-room-warning">Chỉ còn {{ item.so_phong_con_trong }} phòng!</p>
+                                {% endif %}
+
+                                <button class="btn-select-room">
+                                    Chọn phòng
+                                </button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-box">
+                    Không còn phòng phù hợp trong khoảng ngày bạn chọn.
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="detail-section review-section-detail">
+            <h2>Đánh giá của khách hàng</h2>
+
+            {% if data.reviews %}
+                <div class="review-grid">
+                    {% for review in data.reviews %}
+                        <div class="review-item">
+                            <div class="review-avatar"></div>
+                            <div>
+                                <h4>{{ review.nguoi_dung.HoTen if review.nguoi_dung else 'Khách hàng' }}</h4>
+                                <p class="review-star">{{ review.SoSao }}/5 sao</p>
+                                <p>{{ review.BinhLuan if review.BinhLuan else 'Không có bình luận.' }}</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>Khách sạn này chưa có đánh giá.</p>
+            {% endif %}
+        </div>
+
+    </div>
+</section>
+<div class="hotel-photo-viewer" id="hotelPhotoViewer">
+    <button type="button" class="photo-viewer-close" id="closePhotoViewer">
+        <i class="fa-solid fa-xmark"></i>
+    </button>
+
+    <div class="photo-viewer-header">
+        <h2>Hình của khách sạn</h2>
+    </div>
+
+    <div class="photo-viewer-main">
+        <button type="button" class="photo-nav photo-prev" id="photoPrev">
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>
+
+        <div class="photo-main-box">
+            <img id="photoViewerImage" src="" alt="Ảnh khách sạn">
+            <div class="photo-info-bar">
+                <strong id="photoViewerTitle">Khách sạn</strong>
+                <span id="photoViewerCounter">1/1</span>
+            </div>
+        </div>
+
+        <button type="button" class="photo-nav photo-next" id="photoNext">
+            <i class="fa-solid fa-chevron-right"></i>
+        </button>
+    </div>
+
+    <div class="photo-thumbnail-track" id="photoThumbnailTrack">
+        {% for image in data.all_images %}
+            <button
+                type="button"
+                class="photo-thumb {% if loop.index0 == 0 %}active{% endif %}"
+                data-index="{{ loop.index0 }}"
+                data-src="{{ url_for('static', filename=image.url) }}"
+                data-title="{{ image.type }} / {{ image.name }}"
+            >
+                <img src="{{ url_for('static', filename=image.url) }}" alt="{{ image.name }}">
+            </button>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
