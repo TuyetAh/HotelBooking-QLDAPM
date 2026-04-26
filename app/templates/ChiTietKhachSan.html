@@ -196,9 +196,18 @@
                                     <p class="low-room-warning">Chỉ còn {{ item.so_phong_con_trong }} phòng!</p>
                                 {% endif %}
 
-                                <button class="btn-select-room">
+                                <a href="{{ url_for(
+                                    'dat_phong',
+                                    hotel_id=data.hotel.MaKhachSan,
+                                    room_id=item.room.MaLoaiPhong,
+                                    checkin=data.checkin,
+                                    checkout=data.checkout,
+                                    so_nguoi_lon=data.so_nguoi_lon,
+                                    so_phong=data.so_phong
+                                ) }}" class="btn-select-room">
                                     Chọn phòng
-                                </button>
+                                </a>
+
                             </div>
                         </div>
                     {% endfor %}

@@ -178,6 +178,14 @@ def doi_trang_thai_loai_phong(room_id):
 
     return redirect(url_for("quan_ly_loai_phong"))
 
+# =========================================================
+# DẶT PHÒNG KS
+# =========================================================
+@app.route("/dat_phong/<int:hotel_id>/<int:room_id>")
+def dat_phong(hotel_id, room_id):
+
+    return render_template("DatPhong.html")
+
 
 if __name__ == "__main__":
     app.run(debug=True)
