@@ -1,0 +1,111 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Quản lý khách sạn{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+
+        <!-- HEADER DASHBOARD -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+            <div>
+                <h2>Quản lý khách sạn</h2>
+                <p style="color:#6b7280; margin-top:4px;">Xin chào, {{ session.ho_ten }}</p>
+            </div>
+            <a href="{{ url_for('tao_khach_san') }}" class="btn-primary"
+               style="padding:10px 20px; border-radius:8px; font-size:14px;">
+                + Thêm khách sạn mới
+            </a>
+        </div>
+
+        <!-- THỐNG KÊ NHANH -->
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:32px;">
+            <div style="background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+                <p style="color:#6b7280; font-size:13px;">Tổng khách sạn</p>
+                <p style="font-size:28px; font-weight:700; color:#111827;">{{ hotels|length }}</p>
+            </div>
+            <div style="background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+                <p style="color:#6b7280; font-size:13px;">Đã duyệt</p>
+                <p style="font-size:28px; font-weight:700; color:#16a34a;">
+                    {{ hotels|selectattr('TrangThaiDuyet','equalto',1)|list|length }}
+                </p>
+            </div>
+            <div style="background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+                <p style="color:#6b7280; font-size:13px;">Chờ duyệt</p>
+                <p style="font-size:28px; font-weight:700; color:#d97706;">
+                    {{ hotels|selectattr('TrangThaiDuyet','equalto',0)|list|length }}
+                </p>
+            </div>
+            <div style="background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+                <p style="color:#6b7280; font-size:13px;">Từ chối</p>
+                <p style="font-size:28px; font-weight:700; color:#dc2626;">
+                    {{ hotels|selectattr('TrangThaiDuyet','equalto',2)|list|length }}
+                </p>
+            </div>
+        </div>
+
+        <!-- DANH SÁCH KHÁCH SẠN -->
+        {% if hotels %}
+        <div style="background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); overflow:hidden;">
+            <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#f9fafb;">
+                        <th style="padding:14px 16px; text-align:left; font-size:13px; color:#6b7280;">Tên khách sạn</th>
+                        <th style="padding:14px 16px; text-align:left; font-size:13px; color:#6b7280;">Thành phố</th>
+                        <th style="padding:14px 16px; text-align:left; font-size:13px; color:#6b7280;">Trạng thái duyệt</th>
+                        <th style="padding:14px 16px; text-align:left; font-size:13px; color:#6b7280;">Hoạt động</th>
+                        <th style="padding:14px 16px; text-align:left; font-size:13px; color:#6b7280;">Ngày tạo</th>
+                        <th style="padding:14px 16px; text-align:left; font-size:13px; color:#6b7280;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for hotel in hotels %}
+                    <tr style="border-top:1px solid #f3f4f6;">
+                        <td style="padding:14px 16px; font-weight:600;">{{ hotel.TenKhachSan }}</td>
+                        <td style="padding:14px 16px; color:#6b7280;">{{ hotel.ThanhPho }}</td>
+                        <td style="padding:14px 16px;">
+                            {% if hotel.TrangThaiDuyet == 0 %}
+                                <span style="background:#fef3c7; color:#92400e; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600;">Chờ duyệt</span>
+                            {% elif hotel.TrangThaiDuyet == 1 %}
+                                <span style="background:#dcfce7; color:#166534; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600;">Đã duyệt</span>
+                            {% else %}
+                                <span style="background:#fee2e2; color:#991b1b; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600;">Từ chối</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding:14px 16px;">
+                            {% if hotel.TrangThaiHoatDong == 1 %}
+                                <span style="background:#dcfce7; color:#166534; padding:4px 10px; border-radius:20px; font-size:12px;">Đang hoạt động</span>
+                            {% else %}
+                                <span style="background:#f3f4f6; color:#6b7280; padding:4px 10px; border-radius:20px; font-size:12px;">Dừng hoạt động</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding:14px 16px; color:#6b7280; font-size:13px;">
+                            {{ hotel.NgayTao.strftime('%d/%m/%Y') }}
+                        </td>
+                        <td style="padding:14px 16px;">
+                            <a href="{{ url_for('quan_ly_khach_san', hotel_id=hotel.MaKhachSan) }}"
+                               style="color:#0d6efd; font-size:13px; font-weight:600;">
+                               Quản lý
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% else %}
+        <div style="background:#fff; border-radius:12px; padding:60px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+            <p style="font-size:48px; margin-bottom:16px;">🏨</p>
+            <h3 style="margin-bottom:8px; color:#111827;">Chưa có khách sạn nào</h3>
+            <p style="color:#6b7280; margin-bottom:24px;">Bắt đầu bằng cách thêm khách sạn đầu tiên của bạn</p>
+            <a href="{{ url_for('tao_khach_san') }}" class="btn-primary"
+               style="padding:10px 24px; border-radius:8px;">
+                + Thêm khách sạn mới
+            </a>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+{% endblock %}

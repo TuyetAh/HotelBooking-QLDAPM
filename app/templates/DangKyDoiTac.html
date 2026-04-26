@@ -1,0 +1,82 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Đăng ký đối tác{% endblock %}
+
+{% block content %}
+<section class="auth-section">
+    <div class="container">
+        <div class="auth-box" style="max-width: 600px;">
+            <h2>Đăng ký đối tác</h2>
+            <p style="color:#6b7280; margin-bottom:24px; font-size:14px;">
+                Đăng ký để đăng khách sạn của bạn lên hệ thống
+            </p>
+
+            {% if err_msg %}
+                <div class="form-message error">{{ err_msg }}</div>
+            {% endif %}
+
+            <form method="POST">
+
+                <h4 style="margin-bottom:16px; color:#374151;">Thông tin cá nhân</h4>
+
+                <div class="form-group">
+                    <label>Họ và tên <span style="color:red">*</span></label>
+                    <input type="text" name="fullname" placeholder="Nhập họ và tên" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Tên đăng nhập <span style="color:red">*</span></label>
+                    <input type="text" name="username" placeholder="Nhập tên đăng nhập" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Mật khẩu <span style="color:red">*</span></label>
+                    <input type="password" name="password" placeholder="Nhập mật khẩu" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Số điện thoại <span style="color:red">*</span></label>
+                    <input type="text" name="phone" placeholder="Nhập số điện thoại" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Email <span style="color:red">*</span></label>
+                    <input type="email" name="email" placeholder="Nhập email" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Số tài khoản ngân hàng</label>
+                    <input type="text" name="bank_account" placeholder="Dùng để nhận tiền từ hệ thống">
+                </div>
+
+                <hr style="margin: 24px 0;">
+
+                <h4 style="margin-bottom:16px; color:#374151;">Thông tin doanh nghiệp</h4>
+
+                <div class="form-group">
+                    <label>Tên doanh nghiệp / Tên khách sạn</label>
+                    <input type="text" name="ten_doanh_nghiep" placeholder="Nhập tên doanh nghiệp">
+                </div>
+
+                <div class="form-group">
+                    <label>Địa chỉ doanh nghiệp</label>
+                    <input type="text" name="dia_chi_doanh_nghiep" placeholder="Nhập địa chỉ doanh nghiệp">
+                </div>
+
+                <button type="submit" class="btn-primary" style="margin-top:8px;">
+                    Đăng ký đối tác
+                </button>
+            </form>
+
+            <p class="auth-note">
+                Đã có tài khoản?
+                <a href="{{ url_for('dang_nhap') }}">Đăng nhập</a>
+            </p>
+            <p class="auth-note">
+                Là khách hàng?
+                <a href="{{ url_for('dang_ky') }}">Đăng ký tại đây</a>
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}

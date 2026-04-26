@@ -1,0 +1,28 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Đơn đặt phòng của tôi{% endblock %}
+
+{% block content %}
+<section class="booking-section">
+    <div class="container">
+        <h1>Đơn đặt phòng của tôi</h1>
+
+        {% if bookings %}
+            <div class="booking-list">
+                {% for booking in bookings %}
+                    <div class="booking-card">
+                        <p><strong>Mã đặt phòng:</strong> {{ booking.MaDatPhongCode }}</p>
+                        <p><strong>Ngày nhận phòng:</strong> {{ booking.NgayNhanPhong }}</p>
+                        <p><strong>Ngày trả phòng:</strong> {{ booking.NgayTraPhong }}</p>
+                        <p><strong>Số người lưu trú:</strong> {{ booking.SoNguoiLuuTru }}</p>
+                        <p><strong>Tổng tiền:</strong> {{ booking.TongTien }} VNĐ</p>
+                        <p><strong>Trạng thái:</strong> {{ booking.TrangThaiDatPhong }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>Bạn chưa có đơn đặt phòng nào.</p>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

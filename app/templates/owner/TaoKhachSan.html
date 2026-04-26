@@ -1,0 +1,178 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Tạo khách sạn mới{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+
+        <!-- HEADER -->
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:30px;">
+            <a href="{{ url_for('chu_khach_san_dashboard') }}"
+               style="color:#6b7280; font-size:14px;">← Quay lại</a>
+            <h2>Tạo khách sạn mới</h2>
+        </div>
+
+        {% if err_msg %}
+            <div class="alert alert-error">{{ err_msg }}</div>
+        {% endif %}
+
+        <form method="POST">
+            <div style="display:grid; grid-template-columns:2fr 1fr; gap:24px;">
+
+                <!-- CỘT TRÁI -->
+                <div>
+                    <!-- THÔNG TIN CƠ BẢN -->
+                    <div style="background:#fff; border-radius:12px; padding:24px;
+                                box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:24px;">
+                        <h3 style="margin-bottom:20px; font-size:16px;">Thông tin cơ bản</h3>
+
+                        <div class="form-group">
+                            <label>Tên khách sạn <span style="color:red">*</span></label>
+                            <input type="text" name="ten_khach_san"
+                                   placeholder="Nhập tên khách sạn" required>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                            <div class="form-group">
+                                <label>Thành phố <span style="color:red">*</span></label>
+                                <input type="text" name="thanh_pho"
+                                       placeholder="VD: Hà Nội, Đà Nẵng..." required>
+                            </div>
+                            <div class="form-group">
+                                <label>Số điện thoại liên hệ <span style="color:red">*</span></label>
+                                <input type="text" name="so_dien_thoai_lien_he"
+                                       placeholder="Nhập số điện thoại" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Địa chỉ <span style="color:red">*</span></label>
+                            <input type="text" name="dia_chi"
+                                   placeholder="Nhập địa chỉ đầy đủ" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Vị trí nổi bật</label>
+                            <input type="text" name="vi_tri_noi_bat"
+                                   placeholder="VD: Gần biển, Trung tâm thành phố...">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Mô tả khách sạn</label>
+                            <textarea name="mo_ta" rows="4"
+                                      placeholder="Mô tả về khách sạn của bạn..."
+                                      style="width:100%; border:1px solid #d1d5db;
+                                             border-radius:10px; padding:10px 14px;
+                                             font-size:14px; resize:vertical;"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Quy định khách sạn</label>
+                            <textarea name="quy_dinh_khach_san" rows="3"
+                                      placeholder="VD: Không hút thuốc, nhận phòng sau 14h..."
+                                      style="width:100%; border:1px solid #d1d5db;
+                                             border-radius:10px; padding:10px 14px;
+                                             font-size:14px; resize:vertical;"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- TIỆN ÍCH -->
+                    <div style="background:#fff; border-radius:12px; padding:24px;
+                                box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+                        <h3 style="margin-bottom:20px; font-size:16px;">Tiện ích khách sạn</h3>
+                        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+                            {% for tien_ich in tien_ichs %}
+                            <label style="display:flex; align-items:center; gap:8px;
+                                          cursor:pointer; font-size:14px;">
+                                <input type="checkbox" name="tien_ich"
+                                       value="{{ tien_ich.MaTienIch }}">
+                                {{ tien_ich.TenTienIch }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CỘT PHẢI -->
+                <div>
+                    <!-- CHÍNH SÁCH HỦY -->
+                    <div style="background:#fff; border-radius:12px; padding:24px;
+                                box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:24px;">
+                        <h3 style="margin-bottom:20px; font-size:16px;">Chính sách hủy phòng</h3>
+
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <label style="display:flex; align-items:flex-start; gap:10px;
+                                          cursor:pointer; padding:12px; border:1px solid #e5e7eb;
+                                          border-radius:8px;">
+                                <input type="radio" name="chinh_sach_huy" value="0"
+                                       checked style="margin-top:2px;">
+                                <div>
+                                    <p style="font-weight:600; font-size:14px;">Trước 1 ngày</p>
+                                    <p style="color:#6b7280; font-size:12px;">
+                                        Khách có thể hủy miễn phí trước 1 ngày nhận phòng
+                                    </p>
+                                </div>
+                            </label>
+
+                            <label style="display:flex; align-items:flex-start; gap:10px;
+                                          cursor:pointer; padding:12px; border:1px solid #e5e7eb;
+                                          border-radius:8px;">
+                                <input type="radio" name="chinh_sach_huy" value="1"
+                                       style="margin-top:2px;">
+                                <div>
+                                    <p style="font-weight:600; font-size:14px;">Trước 3 ngày</p>
+                                    <p style="color:#6b7280; font-size:12px;">
+                                        Khách có thể hủy miễn phí trước 3 ngày nhận phòng
+                                    </p>
+                                </div>
+                            </label>
+
+                            <label style="display:flex; align-items:flex-start; gap:10px;
+                                          cursor:pointer; padding:12px; border:1px solid #e5e7eb;
+                                          border-radius:8px;">
+                                <input type="radio" name="chinh_sach_huy" value="2"
+                                       style="margin-top:2px;">
+                                <div>
+                                    <p style="font-weight:600; font-size:14px;">Không cho hủy</p>
+                                    <p style="color:#6b7280; font-size:12px;">
+                                        Không hoàn tiền trong mọi trường hợp hủy
+                                    </p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- LƯU Ý -->
+                    <div style="background:#eff6ff; border-radius:12px; padding:20px;
+                                border:1px solid #bfdbfe;">
+                        <h4 style="color:#1e40af; margin-bottom:8px; font-size:14px;">
+                            📋 Lưu ý
+                        </h4>
+                        <ul style="color:#1e40af; font-size:13px; line-height:1.8;
+                                   padding-left:16px;">
+                            <li>Sau khi tạo, khách sạn sẽ ở trạng thái <strong>Chờ duyệt</strong></li>
+                            <li>Admin sẽ xem xét và duyệt trong vòng 24h</li>
+                            <li>Sau khi được duyệt, KS sẽ hiển thị trên trang chủ</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NÚT SUBMIT -->
+            <div style="margin-top:24px; display:flex; gap:12px;">
+                <button type="submit" class="btn-primary"
+                        style="padding:12px 32px; font-size:15px;">
+                    Gửi yêu cầu tạo khách sạn
+                </button>
+                <a href="{{ url_for('chu_khach_san_dashboard') }}"
+                   style="padding:12px 24px; border:1px solid #d1d5db; border-radius:8px;
+                          font-size:14px; color:#374151;">
+                    Hủy
+                </a>
+            </div>
+        </form>
+
+    </div>
+</section>
+{% endblock %}
