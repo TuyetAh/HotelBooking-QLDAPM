@@ -254,13 +254,13 @@ def ho_so():
 
 
 # =========================================================
-# ĐƠN ĐẶT PHÒNG
+# INJECT USER CHO MỌI TEMPLATE
 # =========================================================
-@app.route("/dat-phong-cua-toi")
-@login_required
-def dat_phong_cua_toi():
-    return render_template("DatPhongCuaToi.html", bookings=[])
-
+@app.context_processor
+def inject_user():
+    user_id = session.get("user_id")
+    current_user = get_user_by_id(user_id) if user_id else None
+    return dict(current_user=current_user)
 
 # =========================================================
 # DASHBOARD CHỦ KHÁCH SẠN
@@ -268,7 +268,59 @@ def dat_phong_cua_toi():
 @app.route("/quan-ly")
 @owner_required
 def chu_khach_san_dashboard():
-    return render_template("owner/Dashboard.html", hotels=[])
+    from app.dao import get_hotels_by_owner
+    user_id = session.get("user_id")
+    hotels = get_hotels_by_owner(user_id)
+    return render_template("owner/Dashboard.html", hotels=hotels)
+# =========================================================
+# HỒ SƠ CÁ NHÂN
+# =========================================================
+@app.route("/ho-so")
+@login_required
+def ho_so():
+    user = get_user_by_id(session.get("user_id"))
+    bookings = get_bookings_by_user(session.get("user_id"))
+    return render_template("HoSo.html", user=user, bookings=bookings)
+
+# =========================================================
+# CHỈNH SỬA THÔNG TIN
+# =========================================================
+@app.route("/chinh-sua-thong-tin", methods=["POST"])
+@login_required
+def chinh_sua_thong_tin():
+    user_id = session.get("user_id")
+    ho_ten = request.form.get("ho_ten")
+    so_dien_thoai = request.form.get("so_dien_thoai")
+    email = request.form.get("email")
+    so_tai_khoan_ngan_hang = request.form.get("so_tai_khoan_ngan_hang")
+
+    success, result = update_user(
+        user_id=user_id,
+        ho_ten=ho_ten,
+        so_dien_thoai=so_dien_thoai,
+        email=email,
+        so_tai_khoan_ngan_hang=so_tai_khoan_ngan_hang
+    )
+
+    if success:
+        session["ho_ten"] = result.HoTen
+        flash("Cập nhật thông tin thành công.", "success")
+    else:
+        flash(result, "error")
+
+    return redirect(url_for("ho_so"))
+
+
+# =========================================================
+# ĐỔI MẬT KHẨU
+# =========================================================
+@app.route("/doi-mat-khau", methods=["POST"])
+@login_required
+def doi_mat_khau_route():
+    user_id = session.get("user_id")
+    mat_khau_cu = request.form.get("mat_khau_cu")
+    mat_khau_moi = request.form.get("mat_khau_moi")
+    xac_nhan_mat_khau = request.form.get("xac_nhan_mat_khau")
 
     if mat_khau_moi != xac_nhan_mat_khau:
         flash("Mật khẩu mới không khớp.", "error")
@@ -288,29 +340,99 @@ def chu_khach_san_dashboard():
     return redirect(url_for("ho_so"))
 
 # =========================================================
-# TẠO KHÁCH SẠN
+# ĐĂNG KÝ ĐỐI TÁC / CHỦ KHÁCH SẠN
+# =========================================================
+@app.route("/dang-ky-doi-tac", methods=["GET", "POST"])
+def dang_ky_doi_tac():
+    if request.method == "POST":
+        ho_ten = request.form.get("fullname")
+        ten_dang_nhap = request.form.get("username")
+        mat_khau = request.form.get("password")
+        so_dien_thoai = request.form.get("phone")
+        email = request.form.get("email")
+        so_tai_khoan_ngan_hang = request.form.get("bank_account")
+        ten_doanh_nghiep = request.form.get("ten_doanh_nghiep")
+        dia_chi_doanh_nghiep = request.form.get("dia_chi_doanh_nghiep")
+
+        if not ho_ten or not ten_dang_nhap or not mat_khau or not so_dien_thoai or not email:
+            return render_template("DangKyDoiTac.html",
+                                   err_msg="Vui lòng nhập đầy đủ các trường bắt buộc.")
+
+        success, result = create_hotel_owner_account(
+            ten_dang_nhap=ten_dang_nhap,
+            mat_khau=mat_khau,
+            ho_ten=ho_ten,
+            so_dien_thoai=so_dien_thoai,
+            email=email,
+            so_tai_khoan_ngan_hang=so_tai_khoan_ngan_hang,
+            ten_doanh_nghiep=ten_doanh_nghiep,
+            dia_chi_doanh_nghiep=dia_chi_doanh_nghiep
+        )
+
+        if success:
+            flash("Đăng ký thành công! Vui lòng đăng nhập.", "success")
+            return redirect(url_for("dang_nhap"))
+        else:
+            return render_template("DangKyDoiTac.html", err_msg=result)
+
+    return render_template("DangKyDoiTac.html")
+
+# =========================================================
+# TẠO KHÁCH SẠN MỚI
 # =========================================================
 @app.route("/quan-ly/tao-khach-san", methods=["GET", "POST"])
 @owner_required
 def tao_khach_san():
-    return render_template("owner/TaoKhachSan.html", tien_ichs=[])
+    tien_ichs = get_all_tien_ich_khach_san()
 
+    if request.method == "POST":
+        ten_khach_san = request.form.get("ten_khach_san")
+        thanh_pho = request.form.get("thanh_pho")
+        dia_chi = request.form.get("dia_chi")
+        vi_tri_noi_bat = request.form.get("vi_tri_noi_bat")
+        so_dien_thoai_lien_he = request.form.get("so_dien_thoai_lien_he")
+        mo_ta = request.form.get("mo_ta")
+        quy_dinh_khach_san = request.form.get("quy_dinh_khach_san")
+        chinh_sach_huy = request.form.get("chinh_sach_huy", 0)
+        ds_tien_ich = request.form.getlist("tien_ich")
 
-# =========================================================
-# QUẢN LÝ CHI TIẾT KHÁCH SẠN
+        if not ten_khach_san or not thanh_pho or not dia_chi or not so_dien_thoai_lien_he:
+            return render_template("owner/TaoKhachSan.html",
+                                   tien_ichs=tien_ichs,
+                                   err_msg="Vui lòng nhập đầy đủ các trường bắt buộc.")
+
+        success, result = create_hotel_full(
+            user_id=session.get("user_id"),
+            ten_khach_san=ten_khach_san,
+            thanh_pho=thanh_pho,
+            dia_chi=dia_chi,
+            vi_tri_noi_bat=vi_tri_noi_bat,
+            so_dien_thoai_lien_he=so_dien_thoai_lien_he,
+            mo_ta=mo_ta,
+            quy_dinh_khach_san=quy_dinh_khach_san,
+            chinh_sach_huy=chinh_sach_huy,
+            ds_tien_ich=ds_tien_ich
+        )
+
+        if success:
+            flash("Tạo khách sạn thành công! Vui lòng chờ admin duyệt.", "success")
+            return redirect(url_for("chu_khach_san_dashboard"))
+        else:
+            return render_template("owner/TaoKhachSan.html",
+                                   tien_ichs=tien_ichs,
+                                   err_msg=result)
+
+    return render_template("owner/TaoKhachSan.html", tien_ichs=tien_ichs)
+# QUẢN LÝ CHI TIẾT 1 KHÁCH SẠN
 # =========================================================
 @app.route("/quan-ly/khach-san/<int:hotel_id>")
 @owner_required
 def quan_ly_khach_san(hotel_id):
-    return render_template("owner/QuanLyKhachSan.html", hotel=None)
-
-
-# =========================================================
-# INJECT USER
-# =========================================================
-@app.context_processor
-def inject_user():
-    return dict(current_user=None)
+    hotel = get_hotel_by_id(hotel_id)
+    if not hotel:
+        flash("Không tìm thấy khách sạn.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+    return render_template("owner/QuanLyKhachSan.html", hotel=hotel)
 
 # =========================================================
 # QUẢN LÝ LOẠI PHONGF CỦA KS
