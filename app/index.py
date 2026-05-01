@@ -243,15 +243,14 @@ def dang_xuat():
     flash("Bạn đã đăng xuất.", "success")
     return redirect(url_for("index"))
 
-
 # =========================================================
-# HỒ SƠ
+# ĐƠN ĐẶT PHÒNG CỦA TÔI
 # =========================================================
-@app.route("/ho-so")
+@app.route("/dat-phong-cua-toi")
 @login_required
-def ho_so():
-    return render_template("HoSo.html", user=None, bookings=[])
-
+def dat_phong_cua_toi():
+    bookings = get_bookings_by_user(session.get("user_id"))
+    return render_template("DatPhongCuaToi.html", bookings=bookings)
 
 # =========================================================
 # INJECT USER CHO MỌI TEMPLATE
