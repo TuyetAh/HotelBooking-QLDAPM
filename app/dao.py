@@ -318,18 +318,15 @@ def check_login(username, password):
     if not user:
         return None
 
-    # Tài khoản bị khóa
     if user.TrangThaiHoatDong != 1:
         return None
 
-    # Thử hash trước
     try:
         if check_password_hash(user.MatKhau, password):
             return user
     except Exception:
         pass
 
-    # Dữ liệu mẫu đang là text thường (123456)
     if user.MatKhau == password:
         return user
 
@@ -338,10 +335,6 @@ def check_login(username, password):
 
 def register_user(ten_dang_nhap, mat_khau, ho_ten, so_dien_thoai, email,
                   so_tai_khoan_ngan_hang=None, vai_tro=2):
-    """
-    Đăng ký user mới.
-    Mặc định là khách hàng.
-    """
     if get_user_by_username(ten_dang_nhap):
         return False, "Tên đăng nhập đã tồn tại"
 
@@ -373,9 +366,6 @@ def register_user(ten_dang_nhap, mat_khau, ho_ten, so_dien_thoai, email,
 def create_hotel_owner_account(ten_dang_nhap, mat_khau, ho_ten, so_dien_thoai,
                                email, so_tai_khoan_ngan_hang=None,
                                ten_doanh_nghiep=None, dia_chi_doanh_nghiep=None):
-    """
-    Tạo tài khoản chủ khách sạn.
-    """
     if get_user_by_username(ten_dang_nhap):
         return False, "Tên đăng nhập đã tồn tại"
 
