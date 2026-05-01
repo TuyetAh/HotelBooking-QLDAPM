@@ -8,7 +8,12 @@ from app.dao import (
     get_featured_hotels,
     get_all_amenities,
     search_hotels_advanced,
-    get_hotel_detail_data
+    get_hotel_detail_data,
+    check_login,
+    register_user,
+    get_user_by_id,
+    create_hotel_owner_account, get_bookings_by_user, doi_mat_khau, update_user, create_hotel_full,
+    get_all_tien_ich_khach_san, get_hotel_by_id,
 )
 app = create_app()
 app.secret_key = "hotel_booking_secret_key"
@@ -21,17 +26,18 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get("user_id"):
+            flash("Bạn cần đăng nhập để tiếp tục.", "error")
             return redirect(url_for("dang_nhap"))
         return f(*args, **kwargs)
     return decorated_function
-
-
 def owner_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get("user_id"):
+            flash("Bạn cần đăng nhập.", "error")
             return redirect(url_for("dang_nhap"))
         if session.get("vai_tro") != 1:
+            flash("Bạn không có quyền truy cập.", "error")
             return redirect(url_for("index"))
         return f(*args, **kwargs)
     return decorated_function
@@ -167,24 +173,66 @@ def chi_tiet_khach_san(hotel_id):
 # =========================================================
 @app.route("/dang-ky", methods=["GET", "POST"])
 def dang_ky():
+    if request.method == "POST":
+        ho_ten = request.form.get("fullname")
+        ten_dang_nhap = request.form.get("username")
+        mat_khau = request.form.get("password")
+        so_dien_thoai = request.form.get("phone")
+        email = request.form.get("email")
+        so_tai_khoan_ngan_hang = request.form.get("bank_account")
+
+        if not ho_ten or not ten_dang_nhap or not mat_khau or not so_dien_thoai or not email:
+            return render_template("DangKy.html",
+                                   err_msg="Vui lòng nhập đầy đủ các trường bắt buộc.")
+
+        success, result = register_user(
+            ten_dang_nhap=ten_dang_nhap,
+            mat_khau=mat_khau,
+            ho_ten=ho_ten,
+            so_dien_thoai=so_dien_thoai,
+            email=email,
+            so_tai_khoan_ngan_hang=so_tai_khoan_ngan_hang,
+            vai_tro=2
+        )
+
+        if success:
+            flash("Đăng ký tài khoản thành công. Bạn hãy đăng nhập nhé.", "success")
+            return redirect(url_for("dang_nhap"))
+        else:
+            return render_template("DangKy.html", err_msg=result)
+
     return render_template("DangKy.html")
-
-
-# =========================================================
-# ĐĂNG KÝ ĐỐI TÁC
-# =========================================================
-@app.route("/dang-ky-doi-tac", methods=["GET", "POST"])
-def dang_ky_doi_tac():
-    return render_template("DangKyDoiTac.html")
-
 
 # =========================================================
 # ĐĂNG NHẬP
 # =========================================================
 @app.route("/dang-nhap", methods=["GET", "POST"])
 def dang_nhap():
-    return render_template("DangNhap.html")
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
 
+        if not username or not password:
+            return render_template("DangNhap.html",
+                                   err_msg="Vui lòng nhập tên đăng nhập và mật khẩu.")
+
+        user = check_login(username, password)
+
+        if user:
+            session["user_id"] = user.MaNguoiDung
+            session["username"] = user.TenDangNhap
+            session["ho_ten"] = user.HoTen
+            session["vai_tro"] = user.VaiTro
+            flash("Đăng nhập thành công.", "success")
+            if user.VaiTro == 1:
+                return redirect(url_for("chu_khach_san_dashboard"))
+            else:
+                return redirect(url_for("index"))
+        else:
+            return render_template("DangNhap.html",
+                                   err_msg="Sai tên đăng nhập hoặc mật khẩu.")
+
+    return render_template("DangNhap.html")
 
 # =========================================================
 # ĐĂNG XUẤT
@@ -192,6 +240,7 @@ def dang_nhap():
 @app.route("/dang-xuat")
 def dang_xuat():
     session.clear()
+    flash("Bạn đã đăng xuất.", "success")
     return redirect(url_for("index"))
 
 
@@ -221,6 +270,22 @@ def dat_phong_cua_toi():
 def chu_khach_san_dashboard():
     return render_template("owner/Dashboard.html", hotels=[])
 
+    if mat_khau_moi != xac_nhan_mat_khau:
+        flash("Mật khẩu mới không khớp.", "error")
+        return redirect(url_for("ho_so"))
+
+    if len(mat_khau_moi) < 6:
+        flash("Mật khẩu mới phải có ít nhất 6 ký tự.", "error")
+        return redirect(url_for("ho_so"))
+
+    success, msg = doi_mat_khau(user_id, mat_khau_cu, mat_khau_moi)
+
+    if success:
+        flash("Đổi mật khẩu thành công.", "success")
+    else:
+        flash(msg, "error")
+
+    return redirect(url_for("ho_so"))
 
 # =========================================================
 # TẠO KHÁCH SẠN
