@@ -17,7 +17,7 @@
                 <a href="{{ url_for('ho_so') }}" class="btn-dark">Hồ sơ</a>
                 <a href="{{ url_for('dang_xuat') }}" class="btn-outline">Đăng xuất</a>
             {% else %}
-
+                <a href="{{ url_for('dang_ky_doi_tac') }}" class="top-link">Đăng chỗ nghỉ của bạn</a>
                 <a href="{{ url_for('dang_nhap') }}" class="btn-dark">Đăng nhập</a>
                 <a href="{{ url_for('dang_ky') }}" class="btn-outline">Đăng ký</a>
             {% endif %}
