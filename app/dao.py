@@ -417,6 +417,16 @@ def is_hotel_owner(user):
 def is_customer(user):
     return user is not None and user.VaiTro == 2
 
+def is_hotel_belong_to_owner(hotel_id, user_id):
+    hotel = KhachSan.query.join(
+        ChuKhachSan,
+        KhachSan.MaChuKhachSan == ChuKhachSan.MaChuKhachSan
+    ).filter(
+        KhachSan.MaKhachSan == hotel_id,
+        ChuKhachSan.MaNguoiDung == user_id
+    ).first()
+
+    return hotel is not None
 
 # =========================================================
 # 5. KHÁCH SẠN
@@ -780,60 +790,16 @@ def add_tien_ich_to_room_type(ma_loai_phong, ma_tien_ich):
 # =========================================================
 
 def get_reviews_by_hotel(hotel_id):
-    return DanhGia.query.filter_by(MaKhachSan=hotel_id).order_by(
-        DanhGia.NgayDanhGia.desc()
-    ).all()
+    return DanhGia.query.filter_by(
+        MaKhachSan=hotel_id
+    ).order_by(DanhGia.NgayDanhGia.desc()).all()
 
 
 def get_review_count_by_hotel(hotel_id):
     return DanhGia.query.filter_by(MaKhachSan=hotel_id).count()
 
 
-def update_hotel_average_rating(hotel_id):
-    hotel = get_hotel_by_id(hotel_id)
-    if not hotel:
-        return False
 
-    reviews = DanhGia.query.filter_by(MaKhachSan=hotel_id).all()
-
-    if len(reviews) == 0:
-        hotel.DiemDanhGiaTrungBinh = 0
-    else:
-        total_star = sum(review.SoSao for review in reviews)
-        avg_star = round(total_star / len(reviews), 2)
-        hotel.DiemDanhGiaTrungBinh = avg_star
-
-    try:
-        db.session.commit()
-        return True
-    except Exception:
-        db.session.rollback()
-        return False
-
-
-def add_review(ma_dat_phong, ma_nguoi_dung, ma_khach_san, so_sao, binh_luan=None):
-    existing_review = DanhGia.query.filter_by(MaDatPhong=ma_dat_phong).first()
-    if existing_review:
-        return False, "Đơn đặt phòng này đã được đánh giá"
-
-    review = DanhGia(
-        MaDatPhong=ma_dat_phong,
-        MaNguoiDung=ma_nguoi_dung,
-        MaKhachSan=ma_khach_san,
-        SoSao=so_sao,
-        BinhLuan=binh_luan
-    )
-
-    try:
-        db.session.add(review)
-        db.session.commit()
-
-        update_hotel_average_rating(ma_khach_san)
-
-        return True, review
-    except Exception as e:
-        db.session.rollback()
-        return False, f"Lỗi khi thêm đánh giá: {str(e)}"
 
 
 # =========================================================
@@ -844,110 +810,10 @@ def get_booking_by_id(booking_id):
     return DatPhong.query.get(booking_id)
 
 
-def get_booking_by_code(booking_code):
-    return DatPhong.query.filter_by(MaDatPhongCode=booking_code).first()
-
-
 def get_bookings_by_user(user_id):
     return DatPhong.query.filter_by(MaNguoiDung=user_id).order_by(
         DatPhong.NgayTao.desc()
     ).all()
-
-
-def generate_booking_code():
-    """
-    Sinh mã đặt phòng đơn giản theo timestamp.
-    """
-    return "DP" + datetime.now().strftime("%Y%m%d%H%M%S")
-
-
-def create_booking(ma_nguoi_dung, ma_khach_san, ngay_nhan_phong,
-                   ngay_tra_phong, so_nguoi_luu_tru, chi_tiet_phongs):
-    """
-    Tạo đơn đặt phòng mới.
-
-    chi_tiet_phongs ví dụ:
-    [
-        {
-            "MaLoaiPhong": 1,
-            "SoLuongPhongDat": 1,
-            "DonGiaMoiDem": 800000,
-            "SoDem": 2,
-            "ThanhTien": 1600000
-        }
-    ]
-    """
-    ma_dat_phong_code = generate_booking_code()
-
-    while get_booking_by_code(ma_dat_phong_code):
-        ma_dat_phong_code = generate_booking_code()
-
-    tong_tien = Decimal("0")
-
-    for item in chi_tiet_phongs:
-        tong_tien += Decimal(str(item["ThanhTien"]))
-
-    booking = DatPhong(
-        MaDatPhongCode=ma_dat_phong_code,
-        MaNguoiDung=ma_nguoi_dung,
-        MaKhachSan=ma_khach_san,
-        NgayNhanPhong=ngay_nhan_phong,
-        NgayTraPhong=ngay_tra_phong,
-        SoNguoiLuuTru=so_nguoi_luu_tru,
-        TongTien=tong_tien,
-        TrangThaiDatPhong=0
-    )
-
-    try:
-        db.session.add(booking)
-        db.session.flush()
-
-        for item in chi_tiet_phongs:
-            detail = ChiTietDatPhong(
-                MaDatPhong=booking.MaDatPhong,
-                MaLoaiPhong=item["MaLoaiPhong"],
-                SoLuongPhongDat=item["SoLuongPhongDat"],
-                DonGiaMoiDem=item["DonGiaMoiDem"],
-                SoDem=item["SoDem"],
-                ThanhTien=item["ThanhTien"]
-            )
-            db.session.add(detail)
-
-        db.session.commit()
-        return True, booking
-    except Exception as e:
-        db.session.rollback()
-        return False, f"Lỗi khi tạo đơn đặt phòng: {str(e)}"
-
-
-def cancel_booking(booking_id):
-    booking = get_booking_by_id(booking_id)
-    if not booking:
-        return False, "Không tìm thấy đơn đặt phòng"
-
-    booking.TrangThaiDatPhong = 2
-
-    try:
-        db.session.commit()
-        return True, booking
-    except Exception as e:
-        db.session.rollback()
-        return False, f"Lỗi khi hủy đơn: {str(e)}"
-
-
-def complete_booking(booking_id):
-    booking = get_booking_by_id(booking_id)
-    if not booking:
-        return False, "Không tìm thấy đơn đặt phòng"
-
-    booking.TrangThaiDatPhong = 3
-
-    try:
-        db.session.commit()
-        return True, booking
-    except Exception as e:
-        db.session.rollback()
-        return False, f"Lỗi khi cập nhật hoàn thành đơn: {str(e)}"
 
 
 # =========================================================
@@ -1422,7 +1288,7 @@ def create_hotel_full(user_id, ten_khach_san, thanh_pho, dia_chi,
 
 from sqlalchemy import and_
 
-"""Dùng cho trang tìm kiếm và nút tìm kiếm ửo trnag chủ"""
+#Dùng cho trang tìm kiếm và nút tìm kiếm ửo trnag chủ
 def get_all_amenities():
     """
     Lấy toàn bộ tiện ích để render bộ lọc.
@@ -2382,3 +2248,73 @@ def ensure_payouts_for_completed_bookings():
 
     if created:
         db.session.commit()
+
+def get_completed_bookings_can_review(hotel_id, user_id):
+    """
+    lấy các đơn hoàn thành của ngdung tại ks này mà chưa từng được đánh giá.
+    """
+    completed_bookings = DatPhong.query.filter_by(
+        MaKhachSan=hotel_id,
+        MaNguoiDung=user_id,
+        TrangThaiDatPhong=3
+    ).all()
+
+    result = []
+
+    for booking in completed_bookings:
+        existed_review = DanhGia.query.filter_by(
+            MaDatPhong=booking.MaDatPhong
+        ).first()
+
+        if existed_review:
+            continue
+
+        for detail in booking.chi_tiet_dat_phongs:
+            result.append({
+                "booking": booking,
+                "detail": detail,
+                "room": detail.loai_phong
+            })
+
+    return result
+
+
+def create_review(ma_dat_phong, ma_nguoi_dung, ma_khach_san, so_sao, binh_luan):
+    booking = DatPhong.query.get(ma_dat_phong)
+
+    if not booking:
+        return False, "Không tìm thấy đơn đặt phòng."
+
+    if booking.MaNguoiDung != ma_nguoi_dung:
+        return False, "Bạn không có quyền đánh giá đơn này."
+
+    if booking.MaKhachSan != ma_khach_san:
+        return False, "Đơn đặt phòng không thuộc khách sạn này."
+
+    if booking.TrangThaiDatPhong != 3:
+        return False, "Bạn chỉ được đánh giá sau khi đơn hoàn thành."
+
+    existed_review = DanhGia.query.filter_by(MaDatPhong=ma_dat_phong).first()
+    if existed_review:
+        return False, "Bạn đã đánh giá đơn đặt phòng này rồi."
+
+    review = DanhGia(
+        MaDatPhong=ma_dat_phong,
+        MaNguoiDung=ma_nguoi_dung,
+        MaKhachSan=ma_khach_san,
+        SoSao=int(so_sao),
+        BinhLuan=binh_luan
+    )
+
+    db.session.add(review)
+
+    reviews = DanhGia.query.filter_by(MaKhachSan=ma_khach_san).all()
+    total = sum(r.SoSao for r in reviews) + int(so_sao)
+    count = len(reviews) + 1
+
+    hotel = KhachSan.query.get(ma_khach_san)
+    if hotel:
+        hotel.DiemDanhGiaTrungBinh = round(total / count, 2)
+
+    db.session.commit()
+    return True, "Đánh giá khách sạn thành công."

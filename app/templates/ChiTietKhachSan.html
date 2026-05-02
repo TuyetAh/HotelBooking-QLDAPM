@@ -219,26 +219,120 @@
             {% endif %}
         </div>
 
-        <div class="detail-section review-section-detail">
-            <h2>Đánh giá của khách hàng</h2>
+    <section class="hotel-review-section">
+        <div class="hotel-review-card">
+            <div class="review-header">
+                <div>
+                    <h2>Đánh giá của khách hàng</h2>
+                    <p>
+                        {% if data.reviews %}
+                            {{ data.reviews|length }} đánh giá đã xác thực
+                        {% else %}
+                            Khách sạn này chưa có đánh giá.
+                        {% endif %}
+                    </p>
+                </div>
+
+                {% if data.reviews %}
+                    <div class="review-average">
+                        <strong>{{ "%.1f"|format(data.hotel.DiemDanhGiaTrungBinh or 0) }}</strong>
+                        <span>/ 5.0</span>
+                    </div>
+                {% endif %}
+            </div>
 
             {% if data.reviews %}
-                <div class="review-grid">
+                <div class="review-list">
                     {% for review in data.reviews %}
                         <div class="review-item">
-                            <div class="review-avatar"></div>
-                            <div>
-                                <h4>{{ review.nguoi_dung.HoTen if review.nguoi_dung else 'Khách hàng' }}</h4>
-                                <p class="review-star">{{ review.SoSao }}/5 sao</p>
-                                <p>{{ review.BinhLuan if review.BinhLuan else 'Không có bình luận.' }}</p>
+                            <div class="review-avatar">
+                                {{ review.nguoi_dung.HoTen[:1] if review.nguoi_dung and review.nguoi_dung.HoTen else 'K' }}
+                            </div>
+
+                            <div class="review-content">
+                                <div class="review-top">
+                                    <div>
+                                        <strong>{{ review.nguoi_dung.HoTen if review.nguoi_dung else 'Khách hàng' }}</strong>
+                                        <span>{{ review.loai_phong.TenLoaiPhong if review.loai_phong else '' }}</span>
+                                    </div>
+
+                                    <div class="review-stars">
+                                        {% for i in range(1, 6) %}
+                                            {% if i <= review.SoSao %}
+                                                <i class="fa-solid fa-star"></i>
+                                            {% else %}
+                                                <i class="fa-regular fa-star"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <p>{{ review.BinhLuan if review.BinhLuan else 'Không có nội dung nhận xét.' }}</p>
+
+                                <small>
+                                    {{ review.NgayDanhGia.strftime('%d/%m/%Y %H:%M') if review.NgayDanhGia else '' }}
+                                </small>
                             </div>
                         </div>
                     {% endfor %}
                 </div>
+            {% endif %}
+
+            {% if data.can_review_bookings %}
+                <div class="write-review-box">
+                    <h3>Viết đánh giá</h3>
+
+                    <form method="POST" action="{{ url_for('them_danh_gia_khach_san', hotel_id=data.hotel.MaKhachSan) }}">
+                        <div class="review-form-grid">
+                            <div>
+                                <label>Chọn lần lưu trú</label>
+                                <select name="ma_dat_phong" id="reviewBookingSelect" required>
+                                    <option value="">Chọn đơn đã hoàn thành</option>
+                                    {% for item in data.can_review_bookings %}
+                                        <option value="{{ item.booking.MaDatPhong }}">
+                                            {{ item.room.TenLoaiPhong }}
+
+
+                                            {{ item.booking.NgayNhanPhong.strftime('%d/%m/%Y') if item.booking.NgayNhanPhong else '' }}
+                                            -
+                                            {{ item.booking.NgayTraPhong.strftime('%d/%m/%Y') if item.booking.NgayTraPhong else '' }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+
+
+                            </div>
+
+                            <div>
+                                <label>Số sao</label>
+                                <select name="so_sao" required>
+                                    <option value="">Chọn số sao</option>
+                                    <option value="5">5 sao - Rất hài lòng</option>
+                                    <option value="4">4 sao - Hài lòng</option>
+                                    <option value="3">3 sao - Bình thường</option>
+                                    <option value="2">2 sao - Chưa tốt</option>
+                                    <option value="1">1 sao - Rất tệ</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Nhận xét của bạn</label>
+                            <textarea name="binh_luan" rows="5" placeholder="Chia sẻ trải nghiệm của bạn tại khách sạn..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn-submit-review">
+                            Gửi đánh giá
+                        </button>
+                    </form>
+                </div>
             {% else %}
-                <p>Khách sạn này chưa có đánh giá.</p>
+                <div class="review-note">
+                    Bạn chỉ có thể đánh giá sau khi đã hoàn thành lưu trú tại khách sạn này.
+                </div>
             {% endif %}
         </div>
+    </section>
 
     </div>
 </section>
@@ -283,4 +377,5 @@
         {% endfor %}
     </div>
 </div>
+
 {% endblock %}
