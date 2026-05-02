@@ -33,7 +33,11 @@ from app.dao import (
     register_user,
     get_user_by_id,
     create_hotel_owner_account, get_bookings_by_user, doi_mat_khau, update_user, create_hotel_full,
-    get_all_tien_ich_khach_san, get_hotel_by_id
+    is_hotel_belong_to_owner,
+    get_all_tien_ich_khach_san, get_hotel_by_id,
+    get_reviews_by_hotel,
+    get_completed_bookings_can_review,
+    create_review
 )
 
 app = create_app()
@@ -179,6 +183,16 @@ def chi_tiet_khach_san(hotel_id):
         so_nguoi_lon=so_nguoi_lon,
         so_phong=so_phong
     )
+    can_review_bookings = []
+
+    user_id = session.get("user_id")
+
+    if user_id:
+        can_review_bookings = get_completed_bookings_can_review(hotel_id, user_id)
+
+    data["can_review_bookings"] = can_review_bookings
+    data["reviews"] = get_reviews_by_hotel(hotel_id)
+
     if request.args and (not checkin or not checkout or not so_nguoi_lon or not so_phong):
         flash("Vui lòng nhập đầy đủ ngày nhận phòng, ngày trả phòng, số người lớn và số phòng.", "error")
         return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
@@ -443,37 +457,41 @@ def tao_khach_san():
                                    err_msg=result)
 
     return render_template("owner/TaoKhachSan.html", tien_ichs=tien_ichs)
-# QUẢN LÝ CHI TIẾT 1 KHÁCH SẠN
-# =========================================================
-@app.route("/quan-ly/khach-san/<int:hotel_id>")
-@owner_required
-def quan_ly_khach_san(hotel_id):
-    hotel = get_hotel_by_id(hotel_id)
-    if not hotel:
-        flash("Không tìm thấy khách sạn.", "error")
-        return redirect(url_for("chu_khach_san_dashboard"))
-    return render_template("owner/QuanLyKhachSan.html", hotel=hotel)
+
 
 # =========================================================
 # QUẢN LÝ LOẠI PHONGF CỦA KS
 # =========================================================
 @app.route("/quan-ly/khach-san/<int:hotel_id>/loai-phong")
+@owner_required
 def quan_ly_loai_phong(hotel_id):
+    user_id = session.get("user_id")
+
+    if not is_hotel_belong_to_owner(hotel_id, user_id):
+        flash("Bạn không có quyền quản lý khách sạn này.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+
     tab = request.args.get("tab", "loai-phong")
 
     data = get_room_types_management_by_hotel(hotel_id, tab=tab)
 
     if not data:
         flash("Không tìm thấy khách sạn.", "error")
-        return redirect(url_for("index"))
+        return redirect(url_for("chu_khach_san_dashboard"))
 
-    return render_template("QuanLyLoaiPhong.html", data=data, tab=tab)
+    return render_template("owner/QuanLyLoaiPhong.html", data=data, tab=tab)
 
 # =========================================================
 # QUẢN LÝ LOẠI PHONGF CỦA KS, CHỉnh SỬA
 # =========================================================
 @app.route("/quan-ly/khach-san/<int:hotel_id>/loai-phong/<int:room_id>/chinh-sua", methods=["GET", "POST"])
 def chinh_sua_loai_phong(hotel_id, room_id):
+    user_id = session.get("user_id")
+
+    if not is_hotel_belong_to_owner(hotel_id, user_id):
+        flash("Bạn không có quyền chỉnh sửa loại phòng của khách sạn này.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+
     data = get_room_edit_data(hotel_id, room_id)
 
     if not data:
@@ -514,15 +532,20 @@ def chinh_sua_loai_phong(hotel_id, room_id):
         flash("Cập nhật loại phòng thành công.", "success")
         return redirect(url_for("chinh_sua_loai_phong", hotel_id=hotel_id, room_id=room_id))
 
-    return render_template("ChinhSuaLoaiPhong.html", data=data)
+    return render_template("owner/ChinhSuaLoaiPhong.html", data=data)
 
 # =========================================================
 # QUẢN LÝ LOẠI PHONGF CỦA KS, CHỉnh SỬA, Xóa ảnh
 # =========================================================
 @app.route("/quan-ly/khach-san/<int:hotel_id>/loai-phong/<int:room_id>/xoa-anh", methods=["POST"])
 def xoa_anh_loai_phong(hotel_id, room_id):
-    filename = request.form.get("filename")
+    user_id = session.get("user_id")
 
+    if not is_hotel_belong_to_owner(hotel_id, user_id):
+        flash("Bạn không có quyền xóa ảnh của khách sạn này.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+
+    filename = request.form.get("filename")
     data = get_room_edit_data(hotel_id, room_id)
 
     if not data:
@@ -539,12 +562,20 @@ def xoa_anh_loai_phong(hotel_id, room_id):
 # QUẢN LÝ LOẠI PHONGF CỦA KS ĐỔi trạng thái
 # =========================================================
 @app.route("/quan-ly/loai-phong/<int:room_id>/doi-trang-thai")
+@owner_required
 def doi_trang_thai_loai_phong(room_id):
     room = get_room_type_by_id(room_id)
 
     if not room:
         flash("Không tìm thấy loại phòng.", "error")
-        return redirect(url_for("index"))
+        return redirect(url_for("chu_khach_san_dashboard"))
+
+    user_id = session.get("user_id")
+
+    if not is_hotel_belong_to_owner(room.MaKhachSan, user_id):
+        flash("Bạn không có quyền thao tác với loại phòng này.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+
 
     hotel_id = room.MaKhachSan
 
@@ -582,7 +613,7 @@ def chi_tiet_don_dat_phong_chu_ks(booking_id):
         return redirect(url_for("index"))
 
     return render_template(
-        "ChiTietDonDatPhongChuKS.html",
+        "owner/ChiTietDonDatPhongChuKS.html",
         data=data,
         today=date.today()
     )
@@ -595,7 +626,13 @@ def xoa_loai_phong(room_id):
 
     if not room:
         flash("Không tìm thấy loại phòng.", "error")
-        return redirect(url_for("index"))
+        return redirect(url_for("chu_khach_san_dashboard"))
+
+    user_id = session.get("user_id")
+
+    if not is_hotel_belong_to_owner(room.MaKhachSan, user_id):
+        flash("Bạn không có quyền xóa loại phòng này.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
 
     hotel_id = room.MaKhachSan
 
@@ -620,13 +657,20 @@ def huy_don_dat_phong_chu_ks(booking_id):
     if hotel_id:
         return redirect(url_for("chi_tiet_don_dat_phong_chu_ks", booking_id=booking_id))
 
-    return redirect(url_for("index"))
+    return redirect(url_for("owner/QuanLyLoaiPhong.html"))
 
 # =========================================================
 # QUẢN LÝ LOẠI PHONGF CỦA KS, THÊM LP
 # =========================================================
 @app.route("/quan-ly/khach-san/<int:hotel_id>/loai-phong/them", methods=["GET", "POST"])
+@owner_required
 def them_loai_phong(hotel_id):
+    user_id = session.get("user_id")
+
+    if not is_hotel_belong_to_owner(hotel_id, user_id):
+        flash("Bạn không có quyền thao tác với khách sạn này.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+
     hotel = get_hotel_by_id(hotel_id)
 
     if not hotel:
@@ -675,7 +719,7 @@ def them_loai_phong(hotel_id):
         return redirect(url_for("quan_ly_loai_phong", hotel_id=hotel_id))
 
     return render_template(
-        "ThemLoaiPhong.html",
+        "owner/ThemLoaiPhong.html",
         hotel=hotel,
         amenities=amenities
     )
@@ -686,6 +730,37 @@ def them_loai_phong(hotel_id):
 def before_request():
     auto_complete_expired_bookings()
     ensure_payouts_for_completed_bookings()
+
+# =========================================================
+#  ĐÁNH GIÁ VÀ NHẬN XÉT KS
+# =========================================================
+@app.route("/khach-san/<int:hotel_id>/danh-gia", methods=["POST"])
+def them_danh_gia_khach_san(hotel_id):
+    user_id = session.get("user_id")
+
+    if not user_id:
+        flash("Vui lòng đăng nhập để đánh giá.", "error")
+        return redirect(url_for("dang_nhap"))
+
+    ma_dat_phong = request.form.get("ma_dat_phong")
+    so_sao = request.form.get("so_sao")
+    binh_luan = request.form.get("binh_luan", "").strip()
+
+    if not ma_dat_phong or not so_sao:
+        flash("Vui lòng chọn đơn và số sao đánh giá.", "error")
+        return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
+
+    success, message = create_review(
+        ma_dat_phong=int(ma_dat_phong),
+        ma_nguoi_dung=user_id,
+        ma_khach_san=hotel_id,
+        so_sao=int(so_sao),
+        binh_luan=binh_luan
+    )
+
+    flash(message, "success" if success else "error")
+    return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
+
 # =========================================================
 # DẶT PHÒNG KS
 # =========================================================

@@ -659,3 +659,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
     filterPayouts();
 });
+// Chọn lp theo đơn
+document.addEventListener("DOMContentLoaded", function () {
+    const bookingSelect = document.getElementById("reviewBookingSelect");
+    const roomInput = document.getElementById("reviewRoomId");
+
+    if (!bookingSelect || !roomInput) return;
+
+    bookingSelect.addEventListener("change", function () {
+        const selectedOption = bookingSelect.options[bookingSelect.selectedIndex];
+        roomInput.value = selectedOption.dataset.roomId || "";
+    });
+});
