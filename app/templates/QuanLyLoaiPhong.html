@@ -12,56 +12,57 @@
                 <p>{{ data.hotel.TenKhachSan }} · {{ data.hotel.DiaChi }}</p>
             </div>
 
-            <a href="#" class="btn-add-room">
+            <a href="{{ url_for('them_loai_phong', hotel_id=data.hotel.MaKhachSan) }}" class="btn-add-room">
                 <i class="fa-solid fa-plus"></i>
                 Thêm loại phòng
             </a>
         </div>
 
         <div class="room-stat-grid room-stat-grid-7">
-            <div class="room-stat-card">
+            <a href="{{ url_for('quan_ly_loai_phong', hotel_id=data.hotel.MaKhachSan) }}" class="room-stat-card stat-link">
                 <span>Tổng số loại phòng</span>
                 <strong>{{ data.tong_so_loai_phong }}</strong>
                 <p>Loại phòng đang quản lý</p>
-            </div>
+            </a>
 
-            <div class="room-stat-card">
+            <a href="{{ url_for('quan_ly_loai_phong', hotel_id=data.hotel.MaKhachSan) }}" class="room-stat-card stat-link">
                 <span>Tổng số phòng</span>
                 <strong>{{ data.tong_so_phong }}</strong>
                 <p>Tổng số phòng của khách sạn</p>
-            </div>
+            </a>
 
-            <div class="room-stat-card">
+            <a href="{{ url_for('quan_ly_loai_phong', hotel_id=data.hotel.MaKhachSan, tab='dang-o') }}" class="room-stat-card stat-link">
                 <span>Phòng đang có người ở</span>
                 <strong>{{ data.so_phong_dang_co_nguoi_o }}</strong>
                 <p>Tính theo ngày hôm nay</p>
-            </div>
+            </a>
 
-            <div class="room-stat-card">
+            <a href="{{ url_for('quan_ly_loai_phong', hotel_id=data.hotel.MaKhachSan, tab='phong-trong') }}" class="room-stat-card stat-link">
                 <span>Phòng hiện đang trống</span>
                 <strong>{{ data.so_phong_trong }}</strong>
                 <p>Có thể tiếp nhận khách mới</p>
-            </div>
+            </a>
 
-            <div class="room-stat-card">
+            <a href="{{ url_for('quan_ly_loai_phong', hotel_id=data.hotel.MaKhachSan, tab='don-dat') }}" class="room-stat-card stat-link">
                 <span>Tổng số đơn đặt phòng</span>
                 <strong>{{ data.tong_so_don_dat_phong }}</strong>
                 <p>Tất cả đơn của khách sạn</p>
-            </div>
+            </a>
 
-            <div class="room-stat-card">
+            <a href="{{ url_for('quan_ly_loai_phong', hotel_id=data.hotel.MaKhachSan, tab='don-huy') }}" class="room-stat-card stat-link">
                 <span>Đơn đã hủy</span>
                 <strong>{{ data.so_don_da_huy }}</strong>
                 <p>Trạng thái đã hủy</p>
-            </div>
+            </a>
 
-            <div class="room-stat-card">
-                <span>Tổng thu nhập</span>
+            <a href="{{ url_for('quan_ly_loai_phong', hotel_id=data.hotel.MaKhachSan, tab='thu-nhap') }}" class="room-stat-card stat-link">
+                <span>Thu nhập</span>
                 <strong>{{ "{:,.0f}".format(data.tong_thu_nhap) }}đ</strong>
                 <p>Từ đơn đã thanh toán / hoàn thành</p>
-            </div>
+            </a>
         </div>
 
+        {% if tab == 'loai-phong' %}
         <div class="room-manage-toolbar">
             <div class="room-search-box">
                 <i class="fa-solid fa-magnifying-glass"></i>
@@ -74,88 +75,429 @@
                 <option value="0">Dừng hoạt động</option>
             </select>
         </div>
+        {% endif %}
 
         <div class="room-table-card">
-            <table class="room-manage-table">
-                <thead>
-                    <tr>
-                        <th>Loại phòng</th>
-                        <th>Giá mỗi đêm</th>
-                        <th>Sức chứa</th>
-                        <th>Số lượng</th>
-                        <th>Trạng thái</th>
-                        <th>Ảnh</th>
-                        <th>Thao tác</th>
-                    </tr>
-                </thead>
+            {% if tab == 'dang-o' %}
+                <div class="room-table-card">
+                    <div class="manage-section-title">
+                        <h2>Phòng đang có người ở hôm nay</h2>
+                    </div>
 
-                <tbody>
-                    {% for room in data.room_types %}
-                    <tr class="room-row" data-status="{{ room.TrangThaiHoatDong }}">
-                        <td>
-                            <div class="room-name-cell">
-                                <div class="room-thumb">
-                                    {% if room.first_image %}
-                                        <img src="{{ url_for('static', filename=room.first_image) }}" alt="{{ room.TenLoaiPhong }}">
+                    <table class="room-manage-table">
+                        <thead>
+                            <tr>
+                                <th>Loại phòng</th>
+                                <th>Số phòng đang ở</th>
+                                <th>Giá mỗi đêm</th>
+                                <th>Sức chứa</th>
+                                <th>Trạng thái</th>
+                                <th>Chi tiết</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in data.phong_dang_o %}
+                                <tr>
+                                    <td>{{ item.room.TenLoaiPhong }}</td>
+                                    <td>{{ item.so_luong }} phòng</td>
+                                    <td>{{ "{:,.0f}".format(item.room.GiaMoiDem) }}đ</td>
+                                    <td>{{ item.room.SoNguoiToiDa }} người</td>
+                                    <td><span class="status-badge active">Đang có khách</span></td>
+                                    <td>
+                                        <button type="button"
+                                                class="btn-mini-detail toggle-room-orders"
+                                                data-target="room-orders-{{ item.room.MaLoaiPhong }}">
+                                            Xem đơn
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <!-- đoạn này sẽ xổ ra đơn đang ở ngay bên dưới nè ae -->
+                                <tr id="room-orders-{{ item.room.MaLoaiPhong }}" class="room-orders-row">
+                                    <td colspan="6">
+                                        <div class="room-orders-box">
+                                            <h3>Đơn đang ở của {{ item.room.TenLoaiPhong }}</h3>
+
+                                            <table class="room-orders-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Mã đơn</th>
+                                                        <th>Ngày nhận</th>
+                                                        <th>Ngày trả</th>
+                                                        <th>Số phòng</th>
+                                                        <th>Số đêm</th>
+                                                        <th>Thành tiền</th>
+                                                        <th>Chi tiết</th>
+                                                    </tr>
+                                                </thead>
+
+                                                <tbody>
+                                                    {% for detail in item.orders %}
+                                                    <tr>
+                                                        <td>#{{ detail.MaDatPhong }}</td>
+                                                        <td>{{ detail.dat_phong.NgayNhanPhong }}</td>
+                                                        <td>{{ detail.dat_phong.NgayTraPhong }}</td>
+                                                        <td>{{ detail.SoLuongPhongDat }} phòng</td>
+                                                        <td>{{ detail.SoDem }} đêm</td>
+                                                        <td>{{ "{:,.0f}".format(detail.ThanhTien or 0) }}đ</td>
+                                                        <td>
+                                                            <a href="{{ url_for('chi_tiet_don_dat_phong_chu_ks', booking_id=detail.MaDatPhong) }}"
+                                                               class="btn-mini-detail">
+                                                                Xem chi tiết
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                        </tbody>
+                    </table>
+
+                    {% if not data.phong_dang_o %}
+                        <div class="empty-room-manage">Hôm nay chưa có phòng nào đang có khách.</div>
+                    {% endif %}
+                </div>
+
+            {% elif tab == 'phong-trong' %}
+                <div class="room-table-card">
+                    <div class="manage-section-title">
+                        <h2>Phòng hiện đang trống</h2>
+                    </div>
+
+                    <table class="room-manage-table">
+                        <thead>
+                            <tr>
+                                <th>Loại phòng</th>
+                                <th>Số phòng trống</th>
+                                <th>Tổng số phòng</th>
+                                <th>Giá mỗi đêm</th>
+                                <th>Sức chứa</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in data.phong_trong %}
+                            <tr>
+                                <td>{{ item.room.TenLoaiPhong }}</td>
+                                <td>{{ item.so_luong }} phòng</td>
+                                <td>{{ item.room.SoLuongPhong }} phòng</td>
+                                <td>{{ "{:,.0f}".format(item.room.GiaMoiDem) }}đ</td>
+                                <td>{{ item.room.SoNguoiToiDa }} người</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            {% elif tab == 'don-dat' %}
+                <div class="room-table-card">
+                    <div class="manage-section-title">
+                        <h2>Tất cả đơn đặt phòng</h2>
+                    </div>
+
+                    <div class="booking-manage-toolbar">
+                        <div class="room-search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="bookingSearchInput" placeholder="Tìm kiếm theo mã đơn...">
+                        </div>
+
+                        <select id="bookingStatusFilter">
+                            <option value="all">Tất cả trạng thái</option>
+                            <option value="0">Chờ thanh toán</option>
+                            <option value="1">Đã thanh toán</option>
+                            <option value="2">Đã hủy</option>
+                            <option value="3">Hoàn thành</option>
+                        </select>
+                    </div>
+
+                    <table class="room-manage-table">
+                        <thead>
+                            <tr>
+                                <th>Mã đơn</th>
+                                <th>Loại phòng</th>
+                                <th>Ngày nhận</th>
+                                <th>Ngày trả</th>
+                                <th>Tổng tiền</th>
+                                <th>Trạng thái</th>
+                                <th>Chi tiết</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in data.don_dat_phong %}
+                            <tr class="booking-row"
+                                data-booking-code="{{ booking.MaDatPhong }}"
+                                data-status="{{ booking.TrangThaiDatPhong }}">
+                                <td>#{{ booking.MaDatPhong }}</td>
+                                <td>{{ booking.ten_loai_phong }}</td>
+                                <td>{{ booking.NgayNhanPhong }}</td>
+                                <td>{{ booking.NgayTraPhong }}</td>
+                                <td>{{ "{:,.0f}".format(booking.TongTien) }}đ</td>
+                                <td>
+                                    {% if booking.TrangThaiDatPhong == 0 %}
+                                        <span class="status-badge pending">{{ booking.trang_thai_text }}</span>
+                                    {% elif booking.TrangThaiDatPhong == 1 %}
+                                        <span class="status-badge active">{{ booking.trang_thai_text }}</span>
+                                    {% elif booking.TrangThaiDatPhong == 2 %}
+                                        <span class="status-badge inactive">{{ booking.trang_thai_text }}</span>
+                                    {% elif booking.TrangThaiDatPhong == 3 %}
+                                        <span class="status-badge done">{{ booking.trang_thai_text }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('chi_tiet_don_dat_phong_chu_ks', booking_id=booking.MaDatPhong) }}" class="btn-mini-detail">
+                                        Xem đơn
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            {% elif tab == 'don-huy' %}
+                <div class="room-table-card">
+                    <div class="manage-section-title">
+                        <h2>Đơn đã hủy</h2>
+                    </div>
+
+
+
+                    <table class="room-manage-table">
+                        <thead>
+                            <tr>
+                                <th>Mã đơn</th>
+                                <th>Loại phòng</th>
+                                <th>Ngày nhận</th>
+                                <th>Ngày trả</th>
+                                <th>Tổng tiền</th>
+                                <th>Trạng thái</th>
+                                <th>Chi tiết</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in data.don_da_huy %}
+                            <tr>
+                                <td>#{{ booking.MaDatPhong }}</td>
+                                <td>{{ booking.ten_loai_phong }}</td>
+                                <td>{{ booking.NgayNhanPhong }}</td>
+                                <td>{{ booking.NgayTraPhong }}</td>
+                                <td>{{ "{:,.0f}".format(booking.TongTien) }}đ</td>
+                                <td><span class="status-badge inactive">Đã hủy</span></td>
+                                <td>
+                                    <a href="{{ url_for('chi_tiet_don_dat_phong_chu_ks', booking_id=booking.MaDatPhong) }}" class="btn-mini-detail">
+                                        Xem đơn
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            {% elif tab == 'thu-nhap' %}
+                <div class="room-table-card income-detail-box">
+                    <div class="manage-section-title">
+                        <h2>Chi tiết thu nhập</h2>
+                    </div>
+
+                    <div class="income-block">
+                        <h3>Doanh thu ước tính từ đơn đã thanh toán và hoàn thành</h3>
+                        <div class="room-table-card" style="margin-top: 24px;">
+
+                        <div class="income-grid">
+                            <div>
+                                <span>Doanh thu chưa trừ phí ước tính</span>
+                                <strong>{{ "{:,.0f}".format(data.doanh_thu_uoc_tinh) }}đ</strong>
+                            </div>
+
+                            <div>
+                                <span>Phí hệ thống 10% ước tính</span>
+                                <strong>-{{ "{:,.0f}".format(data.phi_he_thong_uoc_tinh) }}đ</strong>
+                            </div>
+
+                            <div>
+                                <span>Thu nhập thực nhận ước tính</span>
+                                <strong>{{ "{:,.0f}".format(data.thu_nhap_uoc_tinh) }}đ</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="room-table-card payout-table-card">
+                        <div class="manage-section-title">
+                            <h2>Lịch sử chuyển tiền cho khách sạn</h2>
+                        </div>
+
+                        <div class="booking-manage-toolbar">
+                            <div class="room-search-box">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="payoutSearchInput" placeholder="Tìm kiếm theo mã đơn...">
+                            </div>
+
+                            <select id="payoutStatusFilter">
+                                <option value="all">Tất cả trạng thái</option>
+                                <option value="0">Chờ chuyển tiền</option>
+                                <option value="1">Đã chuyển</option>
+                                <option value="2">Thất bại</option>
+                            </select>
+                        </div>
+
+                        <table class="room-manage-table payout-table">
+                            <thead>
+                                <tr>
+                                    <th>Mã đơn</th>
+                                    <th>Tổng tiền đơn hàng</th>
+                                    <th>Phí hệ thống</th>
+                                    <th>Thực nhận</th>
+                                    <th>Trạng thái</th>
+                                    <th>Thời gian chuyển</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {% for p in data.payouts %}
+                                <tr class="payout-row"
+                                    data-booking-code="{{ p.MaDatPhong }}"
+                                    data-status="{{ p.TrangThaiChuyenTien }}"
+                                    data-total="{{ p.TongTienDonHang }}"
+                                    data-fee="{{ p.PhiHeThong }}"
+                                    data-net="{{ p.SoTienChuyenChoKhachSan }}">
+                                    <td>#{{ p.MaDatPhong }}</td>
+                                    <td>{{ "{:,.0f}".format(p.TongTienDonHang or 0) }}đ</td>
+                                    <td>-{{ "{:,.0f}".format(p.PhiHeThong or 0) }}đ</td>
+                                    <td><strong>{{ "{:,.0f}".format(p.SoTienChuyenChoKhachSan or 0) }}đ</strong></td>
+                                    <td>
+                                        {% if p.TrangThaiChuyenTien == 0 %}
+                                            <span class="status-badge pending">Chờ chuyển</span>
+                                        {% elif p.TrangThaiChuyenTien == 1 %}
+                                            <span class="status-badge active">Đã chuyển</span>
+                                        {% else %}
+                                            <span class="status-badge inactive">Thất bại</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if p.ThoiGianChuyenTien %}
+                                            {{ p.ThoiGianChuyenTien.strftime("%d/%m/%Y %H:%M") }}
+                                        {% else %}
+                                            --
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+
+                            <tfoot>
+                                <tr class="payout-total-row">
+                                    <td><strong>Tổng cộng</strong></td>
+                                    <td id="payoutTotalOrder">0đ</td>
+                                    <td id="payoutTotalFee">0đ</td>
+                                    <td id="payoutTotalNet">0đ</td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        {% if not data.payouts %}
+                            <div class="empty-room-manage">Chưa có dữ liệu chuyển tiền.</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+            {% else %}
+                <table class="room-manage-table">
+                    <thead>
+                        <tr>
+                            <th>Loại phòng</th>
+                            <th>Giá mỗi đêm</th>
+                            <th>Sức chứa</th>
+                            <th>Số lượng</th>
+                            <th>Trạng thái</th>
+                            <th>Ảnh</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for room in data.room_types %}
+                        <tr class="room-row" data-status="{{ room.TrangThaiHoatDong }}">
+                            <td>
+                                <div class="room-name-cell">
+                                    <div class="room-thumb">
+                                        {% if room.first_image %}
+                                            <img src="{{ url_for('static', filename=room.first_image) }}" alt="{{ room.TenLoaiPhong }}">
+                                        {% else %}
+                                            <div class="room-thumb-placeholder"></div>
+                                        {% endif %}
+                                    </div>
+
+                                    <div>
+                                        <strong>{{ room.TenLoaiPhong }}</strong>
+                                        <p>{{ room.MoTa if room.MoTa else 'Chưa có mô tả.' }}</p>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td>
+                                <strong>{{ "{:,.0f}".format(room.GiaMoiDem) }}đ</strong>
+                            </td>
+
+                            <td>{{ room.SoNguoiToiDa }} người</td>
+
+                            <td>{{ room.SoLuongPhong }} phòng</td>
+
+                            <td>
+                                {% if room.TrangThaiHoatDong == 1 %}
+                                    <span class="status-badge active">Đang hoạt động</span>
+                                {% else %}
+                                    <span class="status-badge inactive">Dừng hoạt động</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if room.ThuMucAnh %}
+                                    <span class="image-folder">{{ room.ThuMucAnh }}</span>
+                                {% else %}
+                                    <span class="text-muted">Chưa có ảnh</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <div class="room-actions">
+                                    <a href="{{ url_for('chinh_sua_loai_phong', hotel_id=data.hotel.MaKhachSan, room_id=room.MaLoaiPhong) }}" title="Sửa">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </a>
+
+                                    <a href="{{ url_for('doi_trang_thai_loai_phong', room_id=room.MaLoaiPhong) }}"
+                                       title="Đổi trạng thái"
+                                       onclick="return confirm('Bạn có chắc muốn đổi trạng thái loại phòng này không?');">
+                                        {% if room.TrangThaiHoatDong == 1 %}
+                                            <i class="fa-solid fa-eye-slash"></i>
+                                        {% else %}
+                                            <i class="fa-solid fa-eye"></i>
+                                        {% endif %}
+                                    </a>
+
+                                    {% if room.so_dang_o and room.so_dang_o > 0 %}
+                                        <span class="room-delete-disabled" data-tooltip="Không thể xóa vì loại phòng đang có khách">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </span>
                                     {% else %}
-                                        <div class="room-thumb-placeholder"></div>
+                                        <a href="{{ url_for('xoa_loai_phong', room_id=room.MaLoaiPhong) }}"
+                                           title="Xóa"
+                                           onclick="return confirm('Bạn có chắc muốn xóa loại phòng này không?');">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </a>
                                     {% endif %}
                                 </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
 
-                                <div>
-                                    <strong>{{ room.TenLoaiPhong }}</strong>
-                                    <p>{{ room.MoTa if room.MoTa else 'Chưa có mô tả.' }}</p>
-                                </div>
-                            </div>
-                        </td>
-
-                        <td>
-                            <strong>{{ "{:,.0f}".format(room.GiaMoiDem) }}đ</strong>
-                        </td>
-
-                        <td>{{ room.SoNguoiToiDa }} người</td>
-
-                        <td>{{ room.SoLuongPhong }} phòng</td>
-
-                        <td>
-                            {% if room.TrangThaiHoatDong == 1 %}
-                                <span class="status-badge active">Đang hoạt động</span>
-                            {% else %}
-                                <span class="status-badge inactive">Dừng hoạt động</span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            {% if room.ThuMucAnh %}
-                                <span class="image-folder">{{ room.ThuMucAnh }}</span>
-                            {% else %}
-                                <span class="text-muted">Chưa có ảnh</span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            <div class="room-actions">
-                                <a href="{{ url_for('chinh_sua_loai_phong', hotel_id=data.hotel.MaKhachSan, room_id=room.MaLoaiPhong) }}" title="Sửa">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                </a>
-
-                                <a href="{{ url_for('doi_trang_thai_loai_phong', room_id=room.MaLoaiPhong) }}" title="Đổi trạng thái">
-                                    {% if room.TrangThaiHoatDong == 1 %}
-                                        <i class="fa-solid fa-eye-slash"></i>
-                                    {% else %}
-                                        <i class="fa-solid fa-eye"></i>
-                                    {% endif %}
-                                </a>
-
-                                <a href="#" title="Xóa">
-                                    <i class="fa-solid fa-trash"></i>
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
 
             {% if not data.room_types %}
                 <div class="empty-room-manage">
@@ -164,5 +506,6 @@
             {% endif %}
         </div>
     </div>
+
 </section>
 {% endblock %}

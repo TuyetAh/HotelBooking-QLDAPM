@@ -9,12 +9,33 @@ from app.dao import (
     get_all_amenities,
     search_hotels_advanced,
     get_hotel_detail_data,
+    auto_complete_expired_bookings,
+    get_hotel_by_id,
+    get_room_edit_data,
+    update_room_basic_info,
+    update_room_amenities,
+    save_room_images,
+    delete_room_image,
+    get_room_types_management_by_hotel,
+    get_room_type_by_id,
+    update_room_basic_info,
+    update_room_status,
+    get_booking_detail_for_owner,
+    is_room_type_currently_occupied,
+    room_type_has_active_or_future_booking,
+    room_type_has_any_booking,
+    delete_room_type,
+    cancel_booking_by_owner,
+    create_room_type,
+    get_room_amenities_without_db_change,
+    ensure_payouts_for_completed_bookings,
     check_login,
     register_user,
     get_user_by_id,
     create_hotel_owner_account, get_bookings_by_user, doi_mat_khau, update_user, create_hotel_full,
-    get_all_tien_ich_khach_san, get_hotel_by_id,
+    get_all_tien_ich_khach_san, get_hotel_by_id
 )
+
 app = create_app()
 app.secret_key = "hotel_booking_secret_key"
 
@@ -438,34 +459,233 @@ def quan_ly_khach_san(hotel_id):
 # =========================================================
 @app.route("/quan-ly/khach-san/<int:hotel_id>/loai-phong")
 def quan_ly_loai_phong(hotel_id):
+    tab = request.args.get("tab", "loai-phong")
 
+    data = get_room_types_management_by_hotel(hotel_id, tab=tab)
 
-    return render_template("QuanLyLoaiPhong.html")
+    if not data:
+        flash("Không tìm thấy khách sạn.", "error")
+        return redirect(url_for("index"))
+
+    return render_template("QuanLyLoaiPhong.html", data=data, tab=tab)
 
 # =========================================================
 # QUẢN LÝ LOẠI PHONGF CỦA KS, CHỉnh SỬA
 # =========================================================
 @app.route("/quan-ly/khach-san/<int:hotel_id>/loai-phong/<int:room_id>/chinh-sua", methods=["GET", "POST"])
 def chinh_sua_loai_phong(hotel_id, room_id):
+    data = get_room_edit_data(hotel_id, room_id)
 
-    return render_template("ChinhSuaLoaiPhong.html")
+    if not data:
+        flash("Không tìm thấy loại phòng.", "error")
+        return redirect(url_for("quan_ly_loai_phong", hotel_id=hotel_id))
+
+    if request.method == "POST":
+        ten_loai_phong = request.form.get("ten_loai_phong", "").strip()
+        mo_ta = request.form.get("mo_ta", "").strip()
+        gia_moi_dem = request.form.get("gia_moi_dem", "0").strip()
+        so_nguoi_toi_da = request.form.get("so_nguoi_toi_da", "1").strip()
+        so_luong_phong = request.form.get("so_luong_phong", "0").strip()
+        trang_thai_hoat_dong = request.form.get("trang_thai_hoat_dong", "1").strip()
+        amenity_ids = request.form.getlist("tien_ich")
+
+        success, result = update_room_basic_info(
+            room_id=room_id,
+            ten_loai_phong=ten_loai_phong,
+            mo_ta=mo_ta,
+            gia_moi_dem=gia_moi_dem,
+            so_nguoi_toi_da=so_nguoi_toi_da,
+            so_luong_phong=so_luong_phong,
+            trang_thai_hoat_dong=int(trang_thai_hoat_dong)
+        )
+
+        if not success:
+            flash(result, "error")
+            return redirect(url_for("chinh_sua_loai_phong", hotel_id=hotel_id, room_id=room_id))
+
+        update_room_amenities(room_id, amenity_ids)
+
+        files = request.files.getlist("room_images")
+
+        if files and files[0].filename != "":
+            success_img, message_img = save_room_images(data["room"].ThuMucAnh, files)
+            flash(message_img, "success" if success_img else "error")
+
+        flash("Cập nhật loại phòng thành công.", "success")
+        return redirect(url_for("chinh_sua_loai_phong", hotel_id=hotel_id, room_id=room_id))
+
+    return render_template("ChinhSuaLoaiPhong.html", data=data)
 
 # =========================================================
 # QUẢN LÝ LOẠI PHONGF CỦA KS, CHỉnh SỬA, Xóa ảnh
 # =========================================================
 @app.route("/quan-ly/khach-san/<int:hotel_id>/loai-phong/<int:room_id>/xoa-anh", methods=["POST"])
 def xoa_anh_loai_phong(hotel_id, room_id):
-    return redirect(url_for("chinh_sua_loai_phong"))
+    filename = request.form.get("filename")
+
+    data = get_room_edit_data(hotel_id, room_id)
+
+    if not data:
+        flash("Không tìm thấy loại phòng.", "error")
+        return redirect(url_for("quan_ly_loai_phong", hotel_id=hotel_id))
+
+    success, message = delete_room_image(data["room"].ThuMucAnh, filename)
+
+    flash(message, "success" if success else "error")
+    return redirect(url_for("chinh_sua_loai_phong", hotel_id=hotel_id, room_id=room_id))
 
 
 # =========================================================
-# QUẢN LÝ LOẠI PHONGF CỦA KS, CHỉnh SỬA, Xóa ảnh, ĐỔi trạng thái
+# QUẢN LÝ LOẠI PHONGF CỦA KS ĐỔi trạng thái
 # =========================================================
 @app.route("/quan-ly/loai-phong/<int:room_id>/doi-trang-thai")
 def doi_trang_thai_loai_phong(room_id):
+    room = get_room_type_by_id(room_id)
 
-    return redirect(url_for("quan_ly_loai_phong"))
+    if not room:
+        flash("Không tìm thấy loại phòng.", "error")
+        return redirect(url_for("index"))
 
+    hotel_id = room.MaKhachSan
+
+    # Nếu đang hoạt động và muốn dừng
+    if room.TrangThaiHoatDong == 1:
+        if room_type_has_active_or_future_booking(room_id):
+            flash("Không thể dừng hoạt động loại phòng này vì đang có đơn đặt phòng hiện tại hoặc sắp tới. Vui lòng hủy các đơn đặt trước rồi thử lại.", "error")
+            return redirect(url_for("quan_ly_loai_phong", hotel_id=hotel_id))
+
+        new_status = 0
+
+    # Nếu đang dừng thì cho mở lại bình thường
+    else:
+        new_status = 1
+
+    success, result = update_room_status(room_id, new_status)
+
+    if success:
+        flash("Cập nhật trạng thái loại phòng thành công.", "success")
+    else:
+        flash(result, "error")
+
+    return redirect(url_for("quan_ly_loai_phong", hotel_id=hotel_id))
+
+
+# =========================================================
+# QUẢN LÝ LOẠI PHONGF CỦA KS, Xem đơn
+# =========================================================
+@app.route("/quan-ly/dat-phong/<int:booking_id>")
+def chi_tiet_don_dat_phong_chu_ks(booking_id):
+    data = get_booking_detail_for_owner(booking_id)
+
+    if not data:
+        flash("Không tìm thấy đơn đặt phòng.", "error")
+        return redirect(url_for("index"))
+
+    return render_template(
+        "ChiTietDonDatPhongChuKS.html",
+        data=data,
+        today=date.today()
+    )
+# =========================================================
+# QUẢN LÝ LOẠI PHONGF CỦA KS, Xóa LP
+# =========================================================
+@app.route("/quan-ly/loai-phong/<int:room_id>/xoa")
+def xoa_loai_phong(room_id):
+    room = get_room_type_by_id(room_id)
+
+    if not room:
+        flash("Không tìm thấy loại phòng.", "error")
+        return redirect(url_for("index"))
+
+    hotel_id = room.MaKhachSan
+
+    if room_type_has_any_booking(room_id):
+        flash("Không thể xóa loại phòng vì loại phòng này đã có đơn đặt phòng. Bạn chỉ có thể dừng hoạt động.", "error")
+        return redirect(url_for("quan_ly_loai_phong", hotel_id=hotel_id))
+
+    success, message = delete_room_type(room_id)
+
+    flash(message, "success" if success else "error")
+    return redirect(url_for("quan_ly_loai_phong", hotel_id=hotel_id))
+
+# =========================================================
+# QUẢN LÝ LOẠI PHONGF CỦA KS, HỦY ĐƠN
+# =========================================================
+@app.route("/quan-ly/dat-phong/<int:booking_id>/huy", methods=["POST"])
+def huy_don_dat_phong_chu_ks(booking_id):
+    success, message, hotel_id = cancel_booking_by_owner(booking_id)
+
+    flash(message, "success" if success else "error")
+
+    if hotel_id:
+        return redirect(url_for("chi_tiet_don_dat_phong_chu_ks", booking_id=booking_id))
+
+    return redirect(url_for("index"))
+
+# =========================================================
+# QUẢN LÝ LOẠI PHONGF CỦA KS, THÊM LP
+# =========================================================
+@app.route("/quan-ly/khach-san/<int:hotel_id>/loai-phong/them", methods=["GET", "POST"])
+def them_loai_phong(hotel_id):
+    hotel = get_hotel_by_id(hotel_id)
+
+    if not hotel:
+        flash("Không tìm thấy khách sạn.", "error")
+        return redirect(url_for("index"))
+
+    amenities = get_room_amenities_without_db_change()
+
+    if request.method == "POST":
+        ten_loai_phong = request.form.get("ten_loai_phong", "").strip()
+        mo_ta = request.form.get("mo_ta", "").strip()
+        gia_moi_dem = request.form.get("gia_moi_dem", "").strip()
+        so_nguoi_toi_da = request.form.get("so_nguoi_toi_da", "").strip()
+        so_luong_phong = request.form.get("so_luong_phong", "").strip()
+        trang_thai_hoat_dong = request.form.get("trang_thai_hoat_dong", "1")
+        amenity_ids = request.form.getlist("tien_ich")
+
+        if not ten_loai_phong or not gia_moi_dem or not so_nguoi_toi_da or not so_luong_phong:
+            flash("Vui lòng nhập đầy đủ các trường bắt buộc.", "error")
+            return redirect(url_for("them_loai_phong", hotel_id=hotel_id))
+
+        if float(gia_moi_dem) < 1 or int(so_nguoi_toi_da) < 1 or int(so_luong_phong) < 1:
+            flash("Giá, sức chứa và số lượng phòng phải lớn hơn hoặc bằng 1.", "error")
+            return redirect(url_for("them_loai_phong", hotel_id=hotel_id))
+
+        success, result = create_room_type(
+            ma_khach_san=hotel_id,
+            ten_loai_phong=ten_loai_phong,
+            mo_ta=mo_ta,
+            gia_moi_dem=gia_moi_dem,
+            so_nguoi_toi_da=int(so_nguoi_toi_da),
+            so_luong_phong=int(so_luong_phong),
+            trang_thai_hoat_dong=int(trang_thai_hoat_dong),
+            amenity_ids=amenity_ids
+        )
+
+        if not success:
+            flash(result, "error")
+            return redirect(url_for("them_loai_phong", hotel_id=hotel_id))
+
+        files = request.files.getlist("room_images")
+        if files and files[0].filename != "":
+            save_room_images(result.ThuMucAnh, files)
+
+        flash("Thêm loại phòng thành công.", "success")
+        return redirect(url_for("quan_ly_loai_phong", hotel_id=hotel_id))
+
+    return render_template(
+        "ThemLoaiPhong.html",
+        hotel=hotel,
+        amenities=amenities
+    )
+# =========================================================
+# Tự dộng ktra và cập nhập mỗi lần web có request
+# =========================================================
+@app.before_request
+def before_request():
+    auto_complete_expired_bookings()
+    ensure_payouts_for_completed_bookings()
 # =========================================================
 # DẶT PHÒNG KS
 # =========================================================

@@ -1,8 +1,12 @@
 import os
 from sqlalchemy import and_
+from datetime import date, timedelta, time
+from sqlalchemy import func
+from werkzeug.utils import secure_filename
 import shutil
 from datetime import datetime
 from decimal import Decimal
+import math
 
 from sqlalchemy import or_
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -1425,6 +1429,27 @@ def get_all_amenities():
     """
     return TienIch.query.order_by(TienIch.TenTienIch.asc()).all()
 
+def hotel_match_amenities(hotel, tien_ich_ids):
+    if not tien_ich_ids:
+        return True
+
+    tien_ich_ids = [int(x) for x in tien_ich_ids]
+
+    # kiểm tra tiện ích khách sạn
+    hotel_amenity_ids = [t.MaTienIch for t in hotel.tien_ichs]
+
+    # kiểm tra tiện ích loại phòng
+    room_amenity_ids = []
+
+    for room in hotel.loai_phongs:
+        for tien_ich in room.tien_ichs:
+            room_amenity_ids.append(tien_ich.MaTienIch)
+
+    all_ids = set(hotel_amenity_ids + room_amenity_ids)
+
+    # Chỉ cần khách sạn hoặc phòng có tiện ích được chọn là được
+    return any(tien_ich_id in all_ids for tien_ich_id in tien_ich_ids)
+
 
 def search_hotels_advanced(
     keyword=None,
@@ -1485,12 +1510,7 @@ def search_hotels_advanced(
     if chinh_sach_huy is not None and chinh_sach_huy != "":
         query = query.filter(KhachSan.ChinhSachHuy == int(chinh_sach_huy))
 
-    # Lọc theo tiện ích khách sạn
-    if tien_ich_ids:
-        for ma_tien_ich in tien_ich_ids:
-            query = query.filter(
-                KhachSan.tien_ichs.any(TienIch.MaTienIch == int(ma_tien_ich))
-            )
+
 
     hotels = query.all()
 
@@ -1512,6 +1532,23 @@ def search_hotels_advanced(
     so_nguoi_can = int(so_nguoi_lon) if so_nguoi_lon not in (None, "",) else None
 
     for hotel in hotels:
+
+        # Lọc tiện ích: kiểm tra cả tiện ích khách sạn và tiện ích loại phòng
+        if tien_ich_ids:
+            selected_ids = [int(x) for x in tien_ich_ids]
+
+            hotel_amenity_ids = [t.MaTienIch for t in hotel.tien_ichs]
+
+            room_amenity_ids = []
+            for room in hotel.loai_phongs:
+                for tien_ich in room.tien_ichs:
+                    room_amenity_ids.append(tien_ich.MaTienIch)
+
+            all_amenity_ids = set(hotel_amenity_ids + room_amenity_ids)
+
+            if not all(tien_ich_id in all_amenity_ids for tien_ich_id in selected_ids):
+                continue
+
         available_rooms_data = get_available_room_types_by_hotel(
             hotel_id=hotel.MaKhachSan,
             checkin=checkin_date,
@@ -1695,3 +1732,653 @@ def get_room_booking_data(hotel_id, room_id, checkin, checkout, so_nguoi_lon=2, 
         "tong_tien": tong_tien,
         "chinh_sach_huy_text": hien_thi_chinh_sach_huy(hotel.ChinhSachHuy)
     }
+
+"""TRANG QUẢNG LÝ LOẠI PHÒNG"""
+def get_room_types_management_by_hotel(ma_khach_san, tab="loai-phong"):
+    hotel = get_hotel_by_id(ma_khach_san)
+
+    if not hotel:
+        return None
+
+    room_types = LoaiPhong.query.filter_by(MaKhachSan=ma_khach_san).all()
+
+    for room in room_types:
+        room.first_image = get_first_room_image(room.ThuMucAnh)
+
+    tong_so_loai_phong = len(room_types)
+    tong_so_phong = sum(room.SoLuongPhong for room in room_types)
+
+    today = date.today()
+    tomorrow = today + timedelta(days=1)
+
+    so_phong_dang_co_nguoi_o = 0
+    phong_dang_o = []
+    phong_trong = []
+
+    for room in room_types:
+        chi_tiet_co_hieu_luc = ChiTietDatPhong.query.join(DatPhong).filter(
+            ChiTietDatPhong.MaLoaiPhong == room.MaLoaiPhong,
+            DatPhong.MaKhachSan == ma_khach_san,
+            DatPhong.TrangThaiDatPhong.in_([0, 1])
+        ).all()
+
+        chi_tiet_dang_o = []
+
+        for item in chi_tiet_co_hieu_luc:
+            if is_booking_currently_occupying_room(item.dat_phong):
+                chi_tiet_dang_o.append(item)
+
+        so_dang_o = sum(item.SoLuongPhongDat for item in chi_tiet_dang_o)
+
+        room.so_dang_o = so_dang_o
+
+        so_trong = max(0, room.SoLuongPhong - so_dang_o)
+
+        if so_dang_o > 0:
+            phong_dang_o.append({
+                "room": room,
+                "so_luong": so_dang_o,
+                "orders": chi_tiet_dang_o
+            })
+
+        if so_trong > 0:
+            phong_trong.append({
+                "room": room,
+                "so_luong": so_trong
+            })
+
+        so_phong_dang_co_nguoi_o += so_dang_o
+
+    so_phong_trong = max(0, tong_so_phong - so_phong_dang_co_nguoi_o)
+
+    don_dat_phong = DatPhong.query.filter_by(
+        MaKhachSan=ma_khach_san
+    ).order_by(DatPhong.NgayTao.desc()).all()
+
+    don_da_huy = DatPhong.query.filter_by(
+        MaKhachSan=ma_khach_san,
+        TrangThaiDatPhong=2
+    ).order_by(DatPhong.NgayTao.desc()).all()
+
+    for booking in don_dat_phong:
+        room_names = []
+
+        for item in booking.chi_tiet_dat_phongs:
+            if item.loai_phong:
+                room_names.append(item.loai_phong.TenLoaiPhong)
+
+        booking.ten_loai_phong = ", ".join(room_names)
+
+    for booking in don_da_huy:
+        room_names = []
+
+        for item in booking.chi_tiet_dat_phongs:
+            if item.loai_phong:
+                room_names.append(item.loai_phong.TenLoaiPhong)
+
+        booking.ten_loai_phong = ", ".join(room_names)
+
+    tong_so_don_dat_phong = len(don_dat_phong)
+    so_don_da_huy = len(don_da_huy)
+
+    # Doanh thu thực tế: chỉ tính đơn đã hoàn thành
+    doanh_thu_hoan_thanh = db.session.query(
+        func.coalesce(func.sum(DatPhong.TongTien), 0)
+    ).filter(
+        DatPhong.MaKhachSan == ma_khach_san,
+        DatPhong.TrangThaiDatPhong == 3
+    ).scalar()
+
+    phi_he_thong_hoan_thanh = doanh_thu_hoan_thanh * Decimal("0.10")
+    thu_nhap_thuc_nhan = doanh_thu_hoan_thanh - phi_he_thong_hoan_thanh
+
+    # Doanh thu ước tính: tính cả đơn đã thanh toán + hoàn thành
+    doanh_thu_uoc_tinh = db.session.query(
+        func.coalesce(func.sum(DatPhong.TongTien), 0)
+    ).filter(
+        DatPhong.MaKhachSan == ma_khach_san,
+        DatPhong.TrangThaiDatPhong.in_([1, 3])
+    ).scalar()
+
+    phi_he_thong_uoc_tinh = doanh_thu_uoc_tinh * Decimal("0.10")
+    thu_nhap_uoc_tinh = doanh_thu_uoc_tinh - phi_he_thong_uoc_tinh
+
+    for booking in don_dat_phong:
+        booking.trang_thai_text = hien_thi_trang_thai_dat_phong(booking.TrangThaiDatPhong)
+
+    for booking in don_da_huy:
+        booking.trang_thai_text = hien_thi_trang_thai_dat_phong(booking.TrangThaiDatPhong)
+
+    return {
+        "hotel": hotel,
+        "room_types": room_types,
+
+        "tong_so_loai_phong": tong_so_loai_phong,
+        "tong_so_phong": tong_so_phong,
+        "so_phong_dang_co_nguoi_o": so_phong_dang_co_nguoi_o,
+        "so_phong_trong": so_phong_trong,
+
+        "tong_so_don_dat_phong": tong_so_don_dat_phong,
+        "so_don_da_huy": so_don_da_huy,
+        "tong_thu_nhap": doanh_thu_uoc_tinh,
+
+        "doanh_thu_hoan_thanh": doanh_thu_hoan_thanh,
+        "phi_he_thong_hoan_thanh": phi_he_thong_hoan_thanh,
+        "thu_nhap_thuc_nhan": thu_nhap_thuc_nhan,
+
+        "doanh_thu_uoc_tinh": doanh_thu_uoc_tinh,
+        "phi_he_thong_uoc_tinh": phi_he_thong_uoc_tinh,
+        "thu_nhap_uoc_tinh": thu_nhap_uoc_tinh,
+        "payouts": get_payouts_by_hotel(ma_khach_san),
+
+        "phong_dang_o": phong_dang_o,
+        "phong_trong": phong_trong,
+        "don_dat_phong": don_dat_phong,
+        "don_da_huy": don_da_huy,
+        "tab": tab
+    }
+
+def get_first_room_image(folder):
+    """
+    folder trong DB ví dụ: loaiphong/lp_1
+    trả về cho HTML: images/loaiphong/lp_1/1.png
+    """
+    if not folder:
+        return None
+
+    # Đường dẫn thật trong máy
+    base_path = os.path.join(current_app.root_path, "static", "images", folder)
+
+    print("DEBUG folder:", folder)
+    print("DEBUG base_path:", base_path)
+    print("DEBUG exists:", os.path.exists(base_path))
+
+    if not os.path.exists(base_path):
+        return None
+
+    files = sorted(os.listdir(base_path))
+
+    for file_name in files:
+        if file_name.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+            return f"images/{folder}/{file_name}"
+
+    return None
+
+"""Dùng cho trang quản LÝ, chỉnh sửa loại phòng"""
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+
+
+def get_room_image_list(folder):
+    """
+    folder ví dụ: loaiphong/lp_1
+    trả về list:
+    [
+        {'filename': '1.png', 'url': 'images/loaiphong/lp_1/1.png'}
+    ]
+    """
+    if not folder:
+        return []
+
+    folder_path = os.path.join(current_app.root_path, "static", "images", folder)
+
+    if not os.path.exists(folder_path):
+        return []
+
+    images = []
+
+    for file_name in sorted(os.listdir(folder_path)):
+        ext = os.path.splitext(file_name)[1].lower()
+
+        if ext in ALLOWED_IMAGE_EXTENSIONS:
+            images.append({
+                "filename": file_name,
+                "url": f"images/{folder}/{file_name}"
+            })
+
+    return images
+
+
+
+def delete_room_image(folder, filename):
+    if not folder or not filename:
+        return False, "Thiếu thông tin ảnh"
+
+    folder_path = os.path.join(current_app.root_path, "static", "images", folder)
+    file_path = os.path.join(folder_path, filename)
+
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        return True, "Xóa ảnh thành công"
+
+    return False, "Không tìm thấy ảnh"
+
+def get_room_edit_data(hotel_id, room_id):
+    hotel = get_hotel_by_id(hotel_id)
+    room = get_room_type_by_id(room_id)
+
+    if not hotel or not room:
+        return None
+
+    if room.MaKhachSan != hotel.MaKhachSan:
+        return None
+
+    room_images = get_room_image_list(room.ThuMucAnh)
+
+    return {
+        "hotel": hotel,
+        "room": room,
+        "room_images": room_images,
+        "all_amenities": get_room_amenities_without_db_change(),
+        "room_amenity_ids": [amenity.MaTienIch for amenity in room.tien_ichs]
+    }
+
+
+def update_room_basic_info(room_id, ten_loai_phong, mo_ta, gia_moi_dem,
+                           so_nguoi_toi_da, so_luong_phong, trang_thai_hoat_dong):
+    room = get_room_type_by_id(room_id)
+
+    if not room:
+        return False, "Không tìm thấy loại phòng"
+
+    room.TenLoaiPhong = ten_loai_phong
+    room.MoTa = mo_ta
+    room.GiaMoiDem = gia_moi_dem
+    room.SoNguoiToiDa = so_nguoi_toi_da
+    room.SoLuongPhong = so_luong_phong
+    room.TrangThaiHoatDong = trang_thai_hoat_dong
+    room.NgayCapNhat = datetime.now()
+
+    try:
+        db.session.commit()
+        return True, room
+    except Exception as e:
+        db.session.rollback()
+        return False, str(e)
+
+
+def update_room_amenities(room_id, amenity_ids):
+    room = get_room_type_by_id(room_id)
+
+    if not room:
+        return False, "Không tìm thấy loại phòng"
+
+    try:
+        room.tien_ichs.clear()
+
+        for amenity_id in amenity_ids:
+            amenity = TienIch.query.get(int(amenity_id))
+            if amenity:
+                room.tien_ichs.append(amenity)
+
+        db.session.commit()
+        return True, room
+    except Exception as e:
+        db.session.rollback()
+        return False, str(e)
+
+
+def update_room_status(ma_loai_phong, trang_thai):
+    room = get_room_type_by_id(ma_loai_phong)
+
+    if not room:
+        return False, "Không tìm thấy loại phòng"
+
+    room.TrangThaiHoatDong = trang_thai
+    room.NgayCapNhat = datetime.now()
+
+    try:
+        db.session.commit()
+        return True, room
+    except Exception as e:
+        db.session.rollback()
+        return False, str(e)
+
+def get_room_amenities_without_db_change():
+    """
+    Lọc tiện ích phù hợp với loại phòng mà không cần sửa database.
+    Dựa vào tên tiện ích.
+    """
+    room_amenity_names = [
+        "Wifi miễn phí",
+        "Điều hòa",
+        "Máy sấy tóc",
+        "Ban công",
+        "Bồn tắm",
+        "TV",
+        "Mini bar",
+        "Bao gồm bữa sáng",
+        "Tủ lạnh",
+        "Ấm đun nước",
+        "Bàn làm việc",
+        "Máy pha cà phê"
+    ]
+
+    return TienIch.query.filter(
+        TienIch.TenTienIch.in_(room_amenity_names)
+    ).order_by(TienIch.TenTienIch.asc()).all()
+
+def get_next_image_index(folder_path):
+    """
+    Tìm số lớn nhất trong thư mục ảnh rồi trả về số tiếp theo.
+    Ví dụ đang có 1.png, 2.png, 5.png -> trả về 6
+    """
+    max_index = 0
+
+    if not os.path.exists(folder_path):
+        return 1
+
+    for file_name in os.listdir(folder_path):
+        name, ext = os.path.splitext(file_name)
+
+        if ext.lower() in ALLOWED_IMAGE_EXTENSIONS and name.isdigit():
+            max_index = max(max_index, int(name))
+
+    return max_index + 1
+
+
+def save_room_images(folder, files):
+    """
+    folder trong DB ví dụ: loaiphong/lp_1
+
+    Lưu ảnh vào:
+    app/static/images/loaiphong/lp_1/
+
+    Nếu đã có:
+    1.png, 2.png, 5.png
+
+    Ảnh mới sẽ lưu thành:
+    6.png, 7.png, ...
+    """
+    if not folder:
+        return False, "Loại phòng chưa có thư mục ảnh"
+
+    folder_path = os.path.join(
+        current_app.root_path,
+        "static",
+        "images",
+        folder
+    )
+
+    os.makedirs(folder_path, exist_ok=True)
+
+    next_index = get_next_image_index(folder_path)
+    saved_count = 0
+
+    for file in files:
+        if not file or file.filename == "":
+            continue
+
+        original_filename = secure_filename(file.filename)
+        _, ext = os.path.splitext(original_filename)
+        ext = ext.lower()
+
+        if ext not in ALLOWED_IMAGE_EXTENSIONS:
+            continue
+
+        new_filename = f"{next_index}{ext}"
+        save_path = os.path.join(folder_path, new_filename)
+
+        file.save(save_path)
+
+        next_index += 1
+        saved_count += 1
+
+    if saved_count == 0:
+        return False, "Không có ảnh hợp lệ để lưu"
+
+    return True, f"Đã thêm {saved_count} ảnh"
+
+
+# ===== Hàm xme chi ntieest đơn trong qly loaiphong
+def get_booking_detail_for_owner(booking_id):
+    booking = DatPhong.query.get(booking_id)
+
+    if not booking:
+        return None
+
+    booking.trang_thai_text = hien_thi_trang_thai_dat_phong(booking.TrangThaiDatPhong)
+
+    payment = ThanhToan.query.filter_by(MaDatPhong=booking_id).first()
+
+    return {
+        "booking": booking,
+        "hotel": booking.khach_san,
+        "customer": booking.nguoi_dung,
+        "details": booking.chi_tiet_dat_phongs,
+        "payment": payment
+    }
+#
+def is_room_type_currently_occupied(room_id):
+    today = date.today()
+    tomorrow = today + timedelta(days=1)
+
+    count = ChiTietDatPhong.query.join(DatPhong).filter(
+        ChiTietDatPhong.MaLoaiPhong == room_id,
+        DatPhong.TrangThaiDatPhong.in_([0, 1]),
+        DatPhong.NgayNhanPhong < tomorrow,
+        DatPhong.NgayTraPhong > today
+    ).count()
+
+    return count > 0
+
+def delete_room_type(room_id):
+    room = get_room_type_by_id(room_id)
+
+    if not room:
+        return False, "Không tìm thấy loại phòng."
+
+    try:
+        db.session.delete(room)
+        db.session.commit()
+        return True, "Xóa loại phòng thành công."
+    except Exception as e:
+        db.session.rollback()
+        return False, str(e)
+
+def cancel_booking_by_owner(booking_id):
+    booking = DatPhong.query.get(booking_id)
+
+    if not booking:
+        return False, "Không tìm thấy đơn đặt phòng.", None
+
+    hotel_id = booking.MaKhachSan
+    now = datetime.now()
+
+    checkin_datetime = datetime.combine(
+        booking.NgayNhanPhong,
+        time(14, 0)
+    )
+
+    checkout_datetime = datetime.combine(
+        booking.NgayTraPhong,
+        time(12, 0)
+    )
+
+    # Nếu đang trong thời gian lưu trú thì không cho hủy
+    if checkin_datetime <= now < checkout_datetime:
+        return False, "Không thể hủy đơn vì khách đang trong thời gian lưu trú.", hotel_id
+
+
+
+    try:
+        booking.TrangThaiDatPhong = 2  # Đã hủy
+        if hasattr(booking, "NgayCapNhat"):
+            booking.NgayCapNhat = datetime.now()
+
+        payment = ThanhToan.query.filter_by(MaDatPhong=booking_id).first()
+
+        if payment:
+            if payment.TrangThaiThanhToan == 1:
+                payment.TrangThaiThanhToan = 3  # Đã hoàn tiền
+            else:
+                payment.TrangThaiThanhToan = 2  # Thất bại / hủy thanh toán
+
+        db.session.commit()
+        return True, "Hủy đơn đặt phòng thành công.", hotel_id
+
+    except Exception as e:
+        db.session.rollback()
+        return False, str(e), hotel_id
+
+def create_room_type(ma_khach_san, ten_loai_phong, mo_ta, gia_moi_dem,
+                     so_nguoi_toi_da, so_luong_phong, trang_thai_hoat_dong,
+                     amenity_ids):
+    try:
+        room = LoaiPhong(
+            MaKhachSan=ma_khach_san,
+            TenLoaiPhong=ten_loai_phong,
+            MoTa=mo_ta,
+            GiaMoiDem=gia_moi_dem,
+            SoNguoiToiDa=so_nguoi_toi_da,
+            SoLuongPhong=so_luong_phong,
+            TrangThaiHoatDong=trang_thai_hoat_dong
+        )
+
+        db.session.add(room)
+        db.session.flush()
+
+        room.ThuMucAnh = f"loaiphong/lp_{room.MaLoaiPhong}"
+
+        folder_path = os.path.join(
+            current_app.root_path,
+            "static",
+            "images",
+            room.ThuMucAnh
+        )
+        os.makedirs(folder_path, exist_ok=True)
+
+        for amenity_id in amenity_ids:
+            amenity = TienIch.query.get(int(amenity_id))
+            if amenity:
+                room.tien_ichs.append(amenity)
+
+        db.session.commit()
+        return True, room
+
+    except Exception as e:
+        db.session.rollback()
+        return False, str(e)
+
+
+def room_type_has_any_booking(room_id):
+    return ChiTietDatPhong.query.filter_by(MaLoaiPhong=room_id).count() > 0
+
+
+def room_type_has_active_or_future_booking(room_id):
+    today = date.today()
+
+    count = ChiTietDatPhong.query.join(DatPhong).filter(
+        ChiTietDatPhong.MaLoaiPhong == room_id,
+
+        # chỉ tính đơn còn hiệu lực
+        DatPhong.TrangThaiDatPhong.in_([0, 1]),
+
+        # đơn đang ở hoặc đơn sắp tới
+        DatPhong.NgayTraPhong > today
+    ).count()
+
+    return count > 0
+
+def auto_complete_expired_bookings():
+    now = datetime.now()
+
+    bookings = DatPhong.query.filter(
+        DatPhong.TrangThaiDatPhong.in_([0, 1])
+    ).all()
+
+    updated = False
+
+    for booking in bookings:
+        checkout_datetime = datetime.combine(
+            booking.NgayTraPhong,
+            time(12, 0)
+        )
+
+        if now >= checkout_datetime:
+            booking.TrangThaiDatPhong = 3
+            create_payout_for_completed_booking(booking)
+            updated = True
+
+    if updated:
+        db.session.commit()
+
+def is_booking_currently_occupying_room(booking):
+    now = datetime.now()
+
+    checkin_datetime = datetime.combine(
+        booking.NgayNhanPhong,
+        time(14, 0)
+    )
+
+    checkout_datetime = datetime.combine(
+        booking.NgayTraPhong,
+        time(12, 0)
+    )
+
+    return checkin_datetime <= now < checkout_datetime
+
+def get_payouts_by_hotel(ma_khach_san):
+    payouts = ChuyenTienKhachSan.query.filter_by(
+        MaKhachSan=ma_khach_san
+    ).order_by(
+        ChuyenTienKhachSan.ThoiGianChuyenTien.desc()
+    ).all()
+
+    return payouts
+def create_payout_for_completed_booking(booking):
+    existing = ChuyenTienKhachSan.query.filter_by(
+        MaDatPhong=booking.MaDatPhong
+    ).first()
+
+    if existing:
+        return
+
+    phi_he_thong = Decimal(str(booking.TongTien)) * Decimal("0.10")
+    so_tien_chuyen = Decimal(str(booking.TongTien)) - phi_he_thong
+
+    payout = ChuyenTienKhachSan(
+        MaDatPhong=booking.MaDatPhong,
+        MaKhachSan=booking.MaKhachSan,
+        TongTienDonHang=booking.TongTien,
+        PhiHeThong=phi_he_thong,
+        SoTienChuyenChoKhachSan=so_tien_chuyen,
+
+        # 0 = chờ chuyển tiền, 1 = đã chuyển, 2 = thất bại
+        TrangThaiChuyenTien=0,
+        ThoiGianChuyenTien=None
+    )
+
+    db.session.add(payout)
+
+#===== đơn hoàn thành mà chưa có payout thì sẽ bị thiu, nên là TA thêm cho nó bất kỳ đơn nào đã hoàn thành cũng sẽ load tạo đơn chuyển tiền ks*nếu chưa có, tứuc auto check á
+def ensure_payouts_for_completed_bookings():
+    completed_bookings = DatPhong.query.filter_by(
+        TrangThaiDatPhong=3  # Hoàn thành
+    ).all()
+
+    created = False
+
+    for booking in completed_bookings:
+        existing = ChuyenTienKhachSan.query.filter_by(
+            MaDatPhong=booking.MaDatPhong
+        ).first()
+
+        if not existing:
+            phi = Decimal(str(booking.TongTien)) * Decimal("0.10")
+            net = Decimal(str(booking.TongTien)) - phi
+
+            payout = ChuyenTienKhachSan(
+                MaDatPhong=booking.MaDatPhong,
+                MaKhachSan=booking.MaKhachSan,
+                TongTienDonHang=booking.TongTien,
+                PhiHeThong=phi,
+                SoTienChuyenChoKhachSan=net,
+                TrangThaiChuyenTien=0,
+                ThoiGianChuyenTien=None
+            )
+
+            db.session.add(payout)
+            created = True
+
+    if created:
+        db.session.commit()

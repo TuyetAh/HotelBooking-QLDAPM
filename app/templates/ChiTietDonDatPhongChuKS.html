@@ -1,0 +1,165 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Chi tiết đơn đặt phòng{% endblock %}
+
+{% block content %}
+<section class="booking-detail-owner-page">
+    <div class="container">
+
+        <div class="owner-booking-header">
+            <a href="{{ url_for('quan_ly_loai_phong', hotel_id=data.hotel.MaKhachSan) }}" class="back-link">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+
+            <div>
+                <h1>Chi tiết đơn đặt phòng #{{ data.booking.MaDatPhong }}</h1>
+                <p>{{ data.hotel.TenKhachSan }}</p>
+            </div>
+        </div>
+
+        <div class="owner-booking-layout">
+            <main>
+                <div class="booking-detail-card">
+                    <h2>Thông tin đơn</h2>
+
+                    <div class="booking-detail-grid">
+                        <div>
+                            <span>Mã đơn</span>
+                            <strong>#{{ data.booking.MaDatPhong }}</strong>
+                        </div>
+
+                        <div>
+                            <span>Ngày tạo</span>
+                            <strong>{{ data.booking.NgayTao.strftime('%d/%m/%Y %H:%M') if data.booking.NgayTao else '' }}</strong>
+                        </div>
+
+                        <div>
+                            <span>Ngày nhận phòng</span>
+                            <strong>{{ data.booking.NgayNhanPhong }}</strong>
+                        </div>
+
+                        <div>
+                            <span>Ngày trả phòng</span>
+                            <strong>{{ data.booking.NgayTraPhong }}</strong>
+                        </div>
+
+                        <div>
+                            <span>Số người cư trú</span>
+                            <strong>{{ data.booking.SoNguoiLuuTru if data.booking.SoNguoiLuuTru else 0 }} người</strong>
+                        </div>
+
+                        <div>
+                            <span>Trạng thái</span>
+                            <strong>{{ data.booking.trang_thai_text }}</strong>
+                        </div>
+
+                        <div>
+                            <span>Tổng tiền</span>
+                            <strong>{{ "{:,.0f}".format(data.booking.TongTien) }}đ</strong>
+                        </div>
+
+                        {% set dang_luu_tru = data.booking.NgayNhanPhong <= today and today < data.booking.NgayTraPhong %}
+
+                        <div class="booking-owner-actions">
+                            {% if data.booking.TrangThaiDatPhong in [0, 1] and not dang_luu_tru %}
+                                <form method="POST"
+                                      action="{{ url_for('huy_don_dat_phong_chu_ks', booking_id=data.booking.MaDatPhong) }}"
+                                      onsubmit="return confirm('Bạn có chắc muốn hủy đơn đặt phòng này không?');">
+                                    <button type="submit" class="btn-cancel-booking">
+                                        <i class="fa-solid fa-ban"></i>
+                                        Hủy đơn đặt phòng
+                                    </button>
+                                </form>
+                            {% elif dang_luu_tru %}
+                                <button type="button" class="btn-cancel-booking disabled" disabled>
+                                    <i class="fa-solid fa-lock"></i>
+                                    Không thể hủy khi khách đang lưu trú
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn-cancel-booking disabled" disabled>
+                                    <i class="fa-solid fa-ban"></i>
+                                    Không thể hủy đơn
+                                </button>
+                            {% endif %}
+                        </div>
+
+                    </div>
+                </div>
+
+
+
+                <div class="booking-detail-card">
+                    <h2>Phòng đã đặt</h2>
+
+                    <table class="room-manage-table">
+                        <thead>
+                            <tr>
+                                <th>Loại phòng</th>
+                                <th>Số lượng</th>
+                                <th>Giá mỗi đêm</th>
+                                <th>Số đêm</th>
+                                <th>Thành tiền</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for item in data.details %}
+                            <tr>
+                                <td>{{ item.loai_phong.TenLoaiPhong }}</td>
+                                <td>{{ item.SoLuongPhongDat }} phòng</td>
+                                <td>{{ "{:,.0f}".format(item.DonGiaMoiDem if item.DonGiaMoiDem else 0) }}đ</td>
+                                <td>{{ item.SoDem }} đêm</td>
+                                <td>{{ "{:,.0f}".format(item.ThanhTien if item.ThanhTien else 0) }}đ</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="booking-detail-card">
+                    <h2>Thông tin thanh toán</h2>
+
+                    {% if data.payment %}
+                        <div class="booking-detail-grid">
+                            <div>
+                                <span>Phương thức thanh toán</span>
+                                <strong>{{ data.payment.PhuongThucThanhToan }}</strong>
+                            </div>
+
+                            <div>
+                                <span>Mã giao dịch</span>
+                                <strong>{{ data.payment.MaGiaoDich }}</strong>
+                            </div>
+
+                            <div>
+                                <span>Thời gian thanh toán</span>
+                                <strong>
+                                    {{ data.payment.ThoiGianThanhToan.strftime('%d/%m/%Y %H:%M') if data.payment.ThoiGianThanhToan else 'Chưa thanh toán' }}
+                                </strong>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p>Chưa có thông tin thanh toán.</p>
+                    {% endif %}
+                </div>
+            </main>
+
+            <aside>
+                <div class="booking-detail-card">
+                    <h2>Thông tin khách hàng</h2>
+
+                    {% if data.customer %}
+                        <p><strong>Họ tên:</strong> {{ data.customer.HoTen }}</p>
+                        <p><strong>Số điện thoại:</strong> {{ data.customer.SoDienThoai }}</p>
+                        <p><strong>Email:</strong> {{ data.customer.Email }}</p>
+                    {% else %}
+                        <p>Không có thông tin khách hàng.</p>
+                    {% endif %}
+                </div>
+
+            </aside>
+        </div>
+
+    </div>
+</section>
+{% endblock %}

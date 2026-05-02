@@ -451,3 +451,211 @@ setTimeout(() => {
         setTimeout(() => el.remove(), 300);
     });
 }, 3000);
+
+// 9. LỌC NHANH trong qly loại phòng
+document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.getElementById("roomSearchInput");
+    const statusFilter = document.getElementById("roomStatusFilter");
+    const rows = document.querySelectorAll(".room-row");
+
+    if (!searchInput || !statusFilter || rows.length === 0) return;
+
+    function filterRows() {
+        const keyword = searchInput.value.toLowerCase().trim();
+        const status = statusFilter.value;
+
+        rows.forEach((row) => {
+            const text = row.innerText.toLowerCase();
+            const rowStatus = row.dataset.status;
+
+            const matchKeyword = text.includes(keyword);
+            const matchStatus = status === "all" || rowStatus === status;
+
+            row.style.display = matchKeyword && matchStatus ? "" : "none";
+        });
+    }
+
+    searchInput.addEventListener("input", filterRows);
+    statusFilter.addEventListener("change", filterRows);
+});
+
+// 10. Lưu ảnh khi thêm ảnh của trang chínhualoaiphong
+document.addEventListener("DOMContentLoaded", function () {
+    const imageInput = document.querySelector("input[name='room_images']");
+    const editRoomForm = document.getElementById("editRoomForm");
+
+    if (!imageInput || !editRoomForm) return;
+
+    imageInput.addEventListener("change", function () {
+        if (imageInput.files.length > 0) {
+            editRoomForm.submit();
+        }
+    });
+});
+// 11. Khi ấn xemm đơn của các phògn đang có ng ở sẽ xổ đơn ngay bên dưới nó
+document.addEventListener("DOMContentLoaded", function () {
+    const buttons = document.querySelectorAll(".toggle-room-orders");
+
+    buttons.forEach(btn => {
+        btn.addEventListener("click", function () {
+            const targetId = this.dataset.target;
+            const row = document.getElementById(targetId);
+
+            if (!row) return;
+
+            row.classList.toggle("show");
+
+            this.textContent = row.classList.contains("show")
+                ? "Ẩn đơn"
+                : "Xem đơn";
+        });
+    });
+});
+// 12. Tool bả chỉ xuất hiện khi ấn vào tab đơn đặt
+document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.getElementById("bookingSearchInput");
+    const statusFilter = document.getElementById("bookingStatusFilter");
+    const rows = document.querySelectorAll(".booking-row");
+
+    if (!searchInput || !statusFilter || rows.length === 0) return;
+
+    function filterBookings() {
+        const keyword = searchInput.value.trim().replace("#", "");
+        const status = statusFilter.value;
+
+        rows.forEach((row) => {
+            const code = row.dataset.bookingCode || "";
+            const rowStatus = row.dataset.status || "";
+
+            const matchCode = code.includes(keyword);
+            const matchStatus = status === "all" || rowStatus === status;
+
+            row.style.display = matchCode && matchStatus ? "" : "none";
+        });
+    }
+
+    searchInput.addEventListener("input", filterBookings);
+    statusFilter.addEventListener("change", filterBookings);
+});
+
+// 13. khi chọn ảnh sẽ hiển thị preview ngay, có thể xóa ảnh trước khi submit
+document.addEventListener("DOMContentLoaded", function () {
+    const input = document.getElementById("addRoomImagesInput");
+    const previewBox = document.getElementById("addRoomImagePreview");
+    const emptyBox = document.getElementById("addRoomEmptyImageBox");
+
+    if (!input || !previewBox) return;
+
+    let selectedFiles = new DataTransfer();
+
+    function renderPreview() {
+        previewBox.innerHTML = "";
+
+        if (selectedFiles.files.length === 0) {
+            previewBox.appendChild(emptyBox);
+            return;
+        }
+
+        Array.from(selectedFiles.files).forEach((file, index) => {
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                const item = document.createElement("div");
+                item.className = "room-image-manage-item";
+
+                item.innerHTML = `
+                    <img src="${e.target.result}" alt="Ảnh loại phòng">
+                    <button type="button" class="btn-delete-image" data-index="${index}">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                `;
+
+                previewBox.appendChild(item);
+            };
+
+            reader.readAsDataURL(file);
+        });
+    }
+
+    input.addEventListener("change", function () {
+        Array.from(input.files).forEach(file => {
+            selectedFiles.items.add(file);
+        });
+
+        input.files = selectedFiles.files;
+        renderPreview();
+    });
+
+    previewBox.addEventListener("click", function (e) {
+        const deleteBtn = e.target.closest(".btn-delete-image");
+        if (!deleteBtn) return;
+
+        const removeIndex = Number(deleteBtn.dataset.index);
+        const newFiles = new DataTransfer();
+
+        Array.from(selectedFiles.files).forEach((file, index) => {
+            if (index !== removeIndex) {
+                newFiles.items.add(file);
+            }
+        });
+
+        selectedFiles = newFiles;
+        input.files = selectedFiles.files;
+
+        renderPreview();
+    });
+});
+
+
+
+// 14. tìmkiesm, lọc, tính tổng của table ds chuyển tiền ks
+document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.getElementById("payoutSearchInput");
+    const statusFilter = document.getElementById("payoutStatusFilter");
+    const rows = document.querySelectorAll(".payout-row");
+
+    const totalOrderEl = document.getElementById("payoutTotalOrder");
+    const totalFeeEl = document.getElementById("payoutTotalFee");
+    const totalNetEl = document.getElementById("payoutTotalNet");
+
+    if (!searchInput || !statusFilter || rows.length === 0) return;
+
+    function formatMoney(value) {
+        return Number(value || 0).toLocaleString("en-US") + "đ";
+    }
+
+    function filterPayouts() {
+        const keyword = searchInput.value.trim().replace("#", "");
+        const selectedStatus = statusFilter.value;
+
+        let totalOrder = 0;
+        let totalFee = 0;
+        let totalNet = 0;
+
+        rows.forEach((row) => {
+            const code = row.dataset.bookingCode || "";
+            const status = row.dataset.status || "";
+
+            const matchCode = keyword === "" || code.includes(keyword);
+            const matchStatus = selectedStatus === "all" || status === selectedStatus;
+
+            const isVisible = matchCode && matchStatus;
+            row.style.display = isVisible ? "" : "none";
+
+            if (isVisible) {
+                totalOrder += Number(row.dataset.total || 0);
+                totalFee += Number(row.dataset.fee || 0);
+                totalNet += Number(row.dataset.net || 0);
+            }
+        });
+
+        totalOrderEl.textContent = formatMoney(totalOrder);
+        totalFeeEl.textContent = "-" + formatMoney(totalFee);
+        totalNetEl.textContent = formatMoney(totalNet);
+    }
+
+    searchInput.addEventListener("input", filterPayouts);
+    statusFilter.addEventListener("change", filterPayouts);
+
+    filterPayouts();
+});
