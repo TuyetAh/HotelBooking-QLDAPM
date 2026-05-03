@@ -37,7 +37,11 @@ from app.dao import (
     get_all_tien_ich_khach_san, get_hotel_by_id,
     get_reviews_by_hotel,
     get_completed_bookings_can_review,
-    create_review
+    update_hotel_basic_info,
+    create_review,
+    kiem_tra_co_the_huy_don,
+    huy_don_boi_khach_hang,
+    get_booking_detail_for_customer
 )
 
 app = create_app()
@@ -776,6 +780,79 @@ def dat_phong(hotel_id, room_id):
 def thanh_toan_momo(hotel_id, room_id):
 
    return render_template("ThanhToanMoMo.html")
+
+# =========================================================
+
+# CHỈNH SỬA THÔNG TIN CƠ BẢN KHÁCH SẠN
+# =========================================================
+@app.route("/quan-ly/khach-san/<int:hotel_id>/chinh-sua", methods=["POST"])
+@owner_required
+def chinh_sua_khach_san(hotel_id):
+    user_id = session.get("user_id")
+
+    if not is_hotel_belong_to_owner(hotel_id, user_id):
+        flash("Bạn không có quyền chỉnh sửa khách sạn này.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+
+    ten_khach_san = request.form.get("ten_khach_san", "").strip()
+    thanh_pho = request.form.get("thanh_pho", "").strip()
+    dia_chi = request.form.get("dia_chi", "").strip()
+
+    if not ten_khach_san or not thanh_pho or not dia_chi:
+        flash("Vui lòng nhập đầy đủ thông tin.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+
+    success, result = update_hotel_basic_info(hotel_id, ten_khach_san, thanh_pho, dia_chi)
+
+    if success:
+        if result["can_duyet_lai"]:
+            flash(
+                "Cập nhật thành công! Khách sạn đã được chuyển về trạng thái chờ duyệt lại vì bạn đã thay đổi thông tin quan trọng.",
+                "warning"
+            )
+        else:
+            flash("Cập nhật khách sạn thành công.", "success")
+    else:
+        flash(result, "error")
+
+    return redirect(url_for("chu_khach_san_dashboard"))
+
+
+# ROUTE: CHI TIẾT ĐƠN ĐẶT PHÒNG (KHÁCH HÀNG)
+@app.route("/don-dat-phong/<int:booking_id>")
+@login_required
+def chi_tiet_don_khach_hang(booking_id):
+    user_id = session.get("user_id")
+    booking = get_booking_detail_for_customer(booking_id, user_id)
+
+    if not booking:
+        flash("Không tìm thấy đơn đặt phòng.", "error")
+        return redirect(url_for("ho_so"))
+
+    can_cancel, _ = kiem_tra_co_the_huy_don(booking_id, user_id)
+
+    chinh_sach_map = {0: "Trước 1 ngày", 1: "Trước 3 ngày", 2: "Không cho hủy"}
+    chinh_sach_huy_text = chinh_sach_map.get(booking.khach_san.ChinhSachHuy, "Không xác định")
+
+    return render_template(
+        "ChiTietDonKhachHang.html",
+        booking=booking,
+        can_cancel=can_cancel,
+        chinh_sach_huy_text=chinh_sach_huy_text
+    )
+
+
+# ROUTE: HỦY ĐƠN (KHÁCH HÀNG)
+@app.route("/don-dat-phong/<int:booking_id>/huy", methods=["POST"])
+@login_required
+def huy_don_khach_hang(booking_id):
+    user_id = session.get("user_id")
+    ly_do_huy = request.form.get("ly_do_huy", "").strip()
+
+    success, message = huy_don_boi_khach_hang(booking_id, user_id, ly_do_huy or None)
+
+    flash(message, "success" if success else "error")
+    return redirect(url_for("chi_tiet_don_khach_hang", booking_id=booking_id))
 
 
 if __name__ == "__main__":

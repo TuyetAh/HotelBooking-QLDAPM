@@ -18,6 +18,30 @@
             </a>
         </div>
 
+        <!-- FLASH MESSAGES -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {% if category == 'warning' %}
+                    <div style="background:#fffbeb; border:1px solid #fcd34d; color:#92400e;
+                                padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;">
+                        ⚠️ {{ message }}
+                    </div>
+                    {% elif category == 'success' %}
+                    <div style="background:#f0fdf4; border:1px solid #86efac; color:#166534;
+                                padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;">
+                        ✅ {{ message }}
+                    </div>
+                    {% elif category == 'error' %}
+                    <div style="background:#fef2f2; border:1px solid #fca5a5; color:#991b1b;
+                                padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px;">
+                        ❌ {{ message }}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
         <!-- THỐNG KÊ NHANH -->
         <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:32px;">
             <div style="background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
@@ -82,11 +106,26 @@
                         <td style="padding:14px 16px; color:#6b7280; font-size:13px;">
                             {{ hotel.NgayTao.strftime('%d/%m/%Y') }}
                         </td>
+
+                        <!-- SỬA: thêm nút Sửa kế bên nút Quản lý -->
                         <td style="padding:14px 16px;">
-                            <a href="{{ url_for('quan_ly_loai_phong', hotel_id=hotel.MaKhachSan) }}"
-                               style="color:#0d6efd; font-size:13px; font-weight:600;">
-                               Quản lý
-                            </a>
+                            <div style="display:flex; gap:12px; align-items:center;">
+                                <a href="{{ url_for('quan_ly_loai_phong', hotel_id=hotel.MaKhachSan) }}"
+                                   style="color:#0d6efd; font-size:13px; font-weight:600;">
+                                   Quản lý
+                                </a>
+                                <button
+                                    onclick="openEditModal(
+                                        {{ hotel.MaKhachSan }},
+                                        '{{ hotel.TenKhachSan | replace("'", "\\'") }}',
+                                        '{{ hotel.ThanhPho | replace("'", "\\'") }}',
+                                        '{{ hotel.DiaChi | replace("'", "\\'") }}',
+                                        {{ hotel.TrangThaiDuyet }}
+                                    )"
+                                    style="background:none; border:none; color:#f59e0b; font-size:13px; font-weight:600; cursor:pointer; padding:0;">
+                                    ✏️ Sửa
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -108,4 +147,87 @@
 
     </div>
 </section>
+
+<!-- THÊM: MODAL CHỈNH SỬA KHÁCH SẠN -->
+<div id="editModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4);
+     z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:12px; padding:32px; width:100%;
+                max-width:480px; box-shadow:0 8px 32px rgba(0,0,0,0.15);">
+
+        <h3 style="margin-bottom:12px; font-size:18px; color:#111827;">Chỉnh sửa khách sạn</h3>
+
+        <!-- THÊM: cảnh báo, ẩn mặc định, chỉ hiện khi KS đang được duyệt -->
+        <div id="edit_warning" style="display:none; background:#fffbeb; border:1px solid #fcd34d;
+             color:#92400e; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px;">
+            ⚠️ Khách sạn này đang <strong>hoạt động</strong>. Nếu bạn sửa tên hoặc địa chỉ,
+            khách sạn sẽ bị <strong>ẩn khỏi tìm kiếm</strong> và chuyển về
+            <strong>chờ duyệt lại</strong>.
+        </div>
+
+        <form id="editForm" method="POST">
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:13px; font-weight:600;
+                              color:#374151; margin-bottom:6px;">Tên khách sạn</label>
+                <input type="text" name="ten_khach_san" id="input_ten"
+                    style="width:100%; padding:10px 12px; border:1px solid #d1d5db;
+                           border-radius:8px; font-size:14px; box-sizing:border-box;"
+                    required>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:13px; font-weight:600;
+                              color:#374151; margin-bottom:6px;">Thành phố</label>
+                <input type="text" name="thanh_pho" id="input_thanh_pho"
+                    style="width:100%; padding:10px 12px; border:1px solid #d1d5db;
+                           border-radius:8px; font-size:14px; box-sizing:border-box;"
+                    required>
+            </div>
+            <div style="margin-bottom:24px;">
+                <label style="display:block; font-size:13px; font-weight:600;
+                              color:#374151; margin-bottom:6px;">Địa chỉ</label>
+                <input type="text" name="dia_chi" id="input_dia_chi"
+                    style="width:100%; padding:10px 12px; border:1px solid #d1d5db;
+                           border-radius:8px; font-size:14px; box-sizing:border-box;"
+                    required>
+            </div>
+            <div style="display:flex; gap:12px; justify-content:flex-end;">
+                <button type="button" onclick="closeEditModal()"
+                    style="padding:10px 20px; border:1px solid #d1d5db; border-radius:8px;
+                           background:#fff; font-size:14px; cursor:pointer; color:#374151;">
+                    Hủy
+                </button>
+                <button type="submit"
+                    style="padding:10px 20px; background:#0d6efd; color:#fff; border:none;
+                           border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;">
+                    Lưu thay đổi
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- THÊM: SCRIPT XỬ LÝ MODAL -->
+<script>
+function openEditModal(hotelId, tenKhachSan, thanhPho, diaChi, trangThaiDuyet) {
+    document.getElementById('input_ten').value = tenKhachSan;
+    document.getElementById('input_thanh_pho').value = thanhPho;
+    document.getElementById('input_dia_chi').value = diaChi;
+    document.getElementById('editForm').action = '/quan-ly/khach-san/' + hotelId + '/chinh-sua';
+
+    // Chỉ hiện cảnh báo nếu khách sạn đang ở trạng thái đã duyệt
+    const warning = document.getElementById('edit_warning');
+    warning.style.display = (trangThaiDuyet === 1) ? 'block' : 'none';
+
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+}
+
+// Click ra ngoài modal thì đóng
+document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
+});
+</script>
+
 {% endblock %}

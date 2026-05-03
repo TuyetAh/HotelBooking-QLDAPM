@@ -17,7 +17,7 @@
             <div class="alert alert-error">{{ err_msg }}</div>
         {% endif %}
 
-        <form method="POST">
+       <form method="POST" enctype="multipart/form-data">
             <div style="display:grid; grid-template-columns:2fr 1fr; gap:24px;">
 
                 <!-- CỘT TRÁI -->
@@ -75,6 +75,29 @@
                                              border-radius:10px; padding:10px 14px;
                                              font-size:14px; resize:vertical;"></textarea>
                         </div>
+
+                        <div class="form-group">
+                            <label>Ảnh khách sạn</label>
+                            <div style="border:2px dashed #d1d5db; border-radius:10px; padding:20px; text-align:center;">
+                                <input type="file" id="hotel_images" name="hotel_images"
+                                       multiple accept="image/*"
+                                       style="display:none;"
+                                       onchange="previewImages(this)">
+                                <label for="hotel_images"
+                                       style="cursor:pointer; display:inline-flex; align-items:center;
+                                              gap:8px; background:#0d6efd; color:white; padding:10px 20px;
+                                              border-radius:8px; font-size:14px; font-weight:600;">
+                                    📷 Thêm ảnh
+                                </label>
+                                <p style="color:#6b7280; font-size:13px; margin-top:8px;">
+                                    Chọn nhiều ảnh cùng lúc (JPG, PNG, WEBP)
+                                </p>
+                                <div id="image-preview"
+                                     style="display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; justify-content:center;">
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
 
                     <!-- TIỆN ÍCH -->
@@ -175,4 +198,43 @@
 
     </div>
 </section>
+<script>
+function previewImages(input) {
+    const preview = document.getElementById('image-preview');
+    preview.innerHTML = '';
+
+    if (input.files && input.files.length > 0) {
+        Array.from(input.files).forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const div = document.createElement('div');
+                div.style.cssText = 'position:relative; width:120px; height:90px;';
+
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.style.cssText = 'width:120px; height:90px; object-fit:cover; border-radius:8px;';
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.innerHTML = '✕';
+                removeBtn.style.cssText = `
+                    position:absolute; top:4px; right:4px;
+                    width:22px; height:22px; border-radius:50%;
+                    border:none; background:rgba(0,0,0,0.6);
+                    color:white; cursor:pointer; font-size:12px;
+                    display:flex; align-items:center; justify-content:center;
+                `;
+                removeBtn.onclick = function() {
+                    div.remove();
+                };
+
+                div.appendChild(img);
+                div.appendChild(removeBtn);
+                preview.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+}
+</script>
 {% endblock %}
