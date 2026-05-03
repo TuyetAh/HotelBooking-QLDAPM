@@ -41,7 +41,7 @@ from app.dao import (
     create_review,
     kiem_tra_co_the_huy_don,
     huy_don_boi_khach_hang,
-    get_booking_detail_for_customer
+    get_booking_detail_for_customer,
     create_review,
     get_room_booking_data,
     cleanup_expired_pending_bookings,
@@ -914,15 +914,133 @@ def het_han_giu_phong(booking_id):
 @app.route("/thanh-toan/momo/<int:booking_id>")
 @login_required
 def thanh_toan_momo_theo_don(booking_id):
-   data = get_pending_booking_page_data(booking_id, session.get("user_id"))
+    data = get_pending_booking_page_data(booking_id, session.get("user_id"))
 
+    if not data:
+        flash("Không tìm thấy đơn thanh toán.", "error")
+        return redirect(url_for("index"))
 
-   if not data:
-       flash("Không tìm thấy đơn thanh toán.", "error")
-       return redirect(url_for("index"))
+    booking = data["booking"]
 
+    if booking.TrangThaiDatPhong != 0:
+        flash("Đơn này không còn chờ thanh toán.", "error")
+        return redirect(url_for("index"))
 
-   return render_template("ThanhToanMoMo.html", data=data)
+    amount = int(booking.TongTien)
+    order_id = booking.MaDatPhongCode
+    request_id = f"{order_id}_{int(datetime.now().timestamp())}"
+    order_info = f"Thanh toán đặt phòng {order_id}"
+
+    redirect_url = url_for("momo_return", _external=True)
+    ipn_url = url_for("momo_ipn", _external=True)
+
+    request_type = "captureWallet"
+    extra_data = ""
+
+    raw_signature = (
+        f"accessKey={MOMO_ACCESS_KEY}"
+        f"&amount={amount}"
+        f"&extraData={extra_data}"
+        f"&ipnUrl={ipn_url}"
+        f"&orderId={order_id}"
+        f"&orderInfo={order_info}"
+        f"&partnerCode={MOMO_PARTNER_CODE}"
+        f"&redirectUrl={redirect_url}"
+        f"&requestId={request_id}"
+        f"&requestType={request_type}"
+    )
+
+    signature = hmac.new(
+        MOMO_SECRET_KEY.encode("utf-8"),
+        raw_signature.encode("utf-8"),
+        hashlib.sha256
+    ).hexdigest()
+
+    payload = {
+        "partnerCode": MOMO_PARTNER_CODE,
+        "partnerName": "Hotel Booking",
+        "storeId": "HotelBookingStore",
+        "requestId": request_id,
+        "amount": amount,
+        "orderId": order_id,
+        "orderInfo": order_info,
+        "redirectUrl": redirect_url,
+        "ipnUrl": ipn_url,
+        "lang": "vi",
+        "extraData": extra_data,
+        "requestType": request_type,
+        "signature": signature
+    }
+
+    res = requests.post(MOMO_ENDPOINT, json=payload, timeout=30)
+    momo_data = res.json()
+
+    if momo_data.get("resultCode") != 0:
+        flash("Không tạo được thanh toán MoMo: " + momo_data.get("message", ""), "error")
+        return redirect(url_for("dat_phong_theo_don", booking_id=booking_id))
+
+    return redirect(momo_data["payUrl"])
+
+@app.route("/momo/return")
+def momo_return():
+    result_code = request.args.get("resultCode")
+    order_id = request.args.get("orderId")
+    trans_id = request.args.get("transId")
+
+    booking = DatPhong.query.filter_by(MaDatPhongCode=order_id).first()
+
+    if not booking:
+        flash("Không tìm thấy đơn thanh toán.", "error")
+        return redirect(url_for("index"))
+
+    if result_code == "0":
+        booking.TrangThaiDatPhong = 1
+
+        payment = ThanhToan.query.filter_by(MaDatPhong=booking.MaDatPhong).first()
+        if not payment:
+            payment = ThanhToan(MaDatPhong=booking.MaDatPhong)
+
+        payment.PhuongThucThanhToan = "MoMo"
+        payment.MaGiaoDich = str(trans_id)
+        payment.TrangThaiThanhToan = 1
+        payment.ThoiGianThanhToan = datetime.now()
+
+        db.session.add(payment)
+        db.session.commit()
+
+        flash("Thanh toán thành công.", "success")
+    else:
+        flash("Thanh toán chưa thành công hoặc đã bị hủy.", "error")
+
+    return redirect(url_for("chi_tiet_khach_san", hotel_id=booking.MaKhachSan))
+
+@app.route("/momo/ipn", methods=["POST"])
+def momo_ipn():
+    data = request.get_json()
+
+    order_id = data.get("orderId")
+    result_code = data.get("resultCode")
+    trans_id = data.get("transId")
+
+    booking = DatPhong.query.filter_by(MaDatPhongCode=order_id).first()
+
+    if booking and result_code == 0:
+        booking.TrangThaiDatPhong = 1
+
+        payment = ThanhToan.query.filter_by(MaDatPhong=booking.MaDatPhong).first()
+        if not payment:
+            payment = ThanhToan(MaDatPhong=booking.MaDatPhong)
+
+        payment.PhuongThucThanhToan = "MoMo"
+        payment.MaGiaoDich = str(trans_id)
+        payment.TrangThaiThanhToan = 1
+        payment.ThoiGianThanhToan = datetime.now()
+
+        db.session.add(payment)
+        db.session.commit()
+
+    return {"message": "success"}, 200
+
 
 # =========================================================
 
@@ -997,6 +1115,17 @@ def huy_don_khach_hang(booking_id):
     flash(message, "success" if success else "error")
     return redirect(url_for("chi_tiet_don_khach_hang", booking_id=booking_id))
 
+import hmac
+import hashlib
+import json
+import requests
+from datetime import datetime
+
+MOMO_ENDPOINT = "https://test-payment.momo.vn/v2/gateway/api/create"
+
+MOMO_PARTNER_CODE = "MOMOBKUN20180529"
+MOMO_ACCESS_KEY = "F9A2..."
+MOMO_SECRET_KEY = "S8K..."
 
 if __name__ == "__main__":
     app.run(debug=True)
