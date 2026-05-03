@@ -1,199 +1,211 @@
 {% extends 'layout/base.html' %}
 
+
 {% block title %}Đặt phòng{% endblock %}
+
 
 {% block content %}
 <section class="booking-page">
-    <div class="container">
+   <div class="container">
 
-        <div class="booking-gallery">
-            <div class="booking-gallery-main">
-                {% if data.hotel_images %}
-                    <img src="{{ url_for('static', filename=data.hotel_images[0]) }}" alt="{{ data.hotel.TenKhachSan }}">
-                {% else %}
-                    <div class="image-placeholder"></div>
-                {% endif %}
-            </div>
 
-            <div class="booking-gallery-side">
-                {% for image in data.hotel_images[1:5] %}
-                    <div>
-                        <img src="{{ url_for('static', filename=image) }}" alt="{{ data.hotel.TenKhachSan }}">
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
+       <div class="booking-gallery">
+           <div class="booking-gallery-main">
+               {% if data.hotel_images %}
+                   <img src="{{ url_for('static', filename=data.hotel_images[0]) }}" alt="{{ data.hotel.TenKhachSan }}">
+               {% else %}
+                   <div class="image-placeholder"></div>
+               {% endif %}
+           </div>
 
-        <div class="booking-layout">
-            <main class="booking-main">
-                <div class="booking-hotel-title">
-                    <h1>{{ data.hotel.TenKhachSan }}</h1>
-                    <p>
-                        <i class="fa-solid fa-location-dot"></i>
-                        {{ data.hotel.DiaChi }}, {{ data.hotel.ThanhPho }}
-                    </p>
-                </div>
 
-                <div class="booking-box">
-                    <h2>Thông tin lưu trú</h2>
+           <div class="booking-gallery-side">
+               {% for image in data.hotel_images[1:5] %}
+                   <div>
+                       <img src="{{ url_for('static', filename=image) }}" alt="{{ data.hotel.TenKhachSan }}">
+                   </div>
+               {% endfor %}
+           </div>
+       </div>
 
-                    <div class="booking-info-grid">
-                        <div>
-                            <span>Nhận phòng</span>
-                            <strong>{{ data.checkin }}</strong>
-                            <small>Từ 14:00</small>
-                        </div>
 
-                        <div>
-                            <span>Trả phòng</span>
-                            <strong>{{ data.checkout }}</strong>
-                            <small>Trước 12:00</small>
-                        </div>
+       <div class="booking-layout">
+           <main class="booking-main">
+               <div class="booking-hotel-title">
+                   <h1>{{ data.hotel.TenKhachSan }}</h1>
+                   <p>
+                       <i class="fa-solid fa-location-dot"></i>
+                       {{ data.hotel.DiaChi }}, {{ data.hotel.ThanhPho }}
+                   </p>
+               </div>
 
-                        <div>
-                            <span>Thời gian</span>
-                            <strong>{{ data.so_dem }} đêm</strong>
-                            <small>{{ data.so_phong }} phòng, {{ data.so_nguoi_lon }} người lớn</small>
-                        </div>
-                    </div>
 
-                    <div class="room-booking-info">
-                        <h3>{{ data.room.TenLoaiPhong }}</h3>
+               <div class="booking-box">
+                   <h2>Thông tin lưu trú</h2>
 
-                        <div class="room-booking-meta">
-                            <span><i class="fa-solid fa-user"></i> Tối đa {{ data.room.SoNguoiToiDa }} người</span>
-                            <span><i class="fa-solid fa-bed"></i> Còn {{ data.so_phong_con_trong }} phòng</span>
-                            <span><i class="fa-solid fa-wifi"></i> Wifi miễn phí</span>
-                        </div>
 
-                        <p>{{ data.room.MoTa if data.room.MoTa else 'Chưa có mô tả loại phòng.' }}</p>
+                   <div class="booking-info-grid">
+                       <div>
+                           <span>Nhận phòng</span>
+                           <strong>{{ data.checkin }}</strong>
+                           <small>Từ 14:00</small>
+                       </div>
 
-                        <div class="booking-room-gallery-wrapper">
-                            <div class="booking-room-gallery-header">
-                                <h4>Hình ảnh loại phòng</h4>
 
-                                {% if data.room_images and data.room_images|length > 3 %}
-                                    <div class="booking-room-gallery-nav">
-                                        <button type="button" class="booking-room-gallery-btn" id="bookingRoomPrev">
-                                            <i class="fa-solid fa-chevron-left"></i>
-                                        </button>
-                                        <button type="button" class="booking-room-gallery-btn" id="bookingRoomNext">
-                                            <i class="fa-solid fa-chevron-right"></i>
-                                        </button>
-                                    </div>
-                                {% endif %}
-                            </div>
+                       <div>
+                           <span>Trả phòng</span>
+                           <strong>{{ data.checkout }}</strong>
+                           <small>Trước 12:00</small>
+                       </div>
 
-                            {% if data.room_images %}
-                                <div class="booking-room-gallery-viewport">
-                                    <div class="booking-room-gallery-track" id="bookingRoomGalleryTrack">
-                                        {% for image in data.room_images %}
-                                            <div class="booking-room-gallery-item">
-                                                <img src="{{ url_for('static', filename=image) }}" alt="{{ data.room.TenLoaiPhong }}">
-                                            </div>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            {% else %}
-                                <div class="empty-box">Loại phòng này chưa có hình ảnh.</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
 
-                <div class="booking-box">
-<h2>Chính sách & thông tin quan trọng</h2>
+                       <div>
+                           <span>Thời gian</span>
+                           <strong>{{ data.so_dem }} đêm</strong>
+                           <small>{{ data.so_phong }} phòng, {{ data.so_nguoi_lon }} người lớn</small>
+                       </div>
+                   </div>
 
-                    <div class="policy-list">
-                        <div>
-                            <i class="fa-solid fa-circle-check"></i>
-                            <div>
-                                <strong>Chính sách hủy</strong>
-                                <p>{{ data.chinh_sach_huy_text }}</p>
-                            </div>
-                        </div>
 
-                        <div>
-                            <i class="fa-solid fa-circle-check"></i>
-                            <div>
-                                <strong>Xác nhận nhanh</strong>
-                                <p>Đơn đặt phòng sẽ được ghi nhận sau khi bạn xác nhận.</p>
-                            </div>
-                        </div>
+                   <div class="room-booking-info">
+                       <h3>{{ data.room.TenLoaiPhong }}</h3>
 
-                        <div>
-                            <i class="fa-solid fa-circle-info"></i>
-                            <div>
-                                <strong>Yêu cầu đặc biệt</strong>
-                                <p>Yêu cầu đặc biệt sẽ được hỗ trợ tùy theo tình trạng phòng.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <form action="#" method="POST" class="booking-box guest-info-form">
-                    <h2>Thông tin khách đặt phòng</h2>
+                       <div class="room-booking-meta">
+                           <span><i class="fa-solid fa-user"></i> Tối đa {{ data.room.SoNguoiToiDa }} người</span>
+                           <span><i class="fa-solid fa-bed"></i> Còn {{ data.so_phong_con_trong }} phòng</span>
+                           {% if data.room.tien_ichs %}
+                               {% for amenity in data.room.tien_ichs %}
+                                   <span class="room-amenity-pill">
+                                       <i class="fa-solid fa-check"></i>
+                                       {{ amenity.TenTienIch }}
+                                   </span>
+                               {% endfor %}
+                           {% else %}
+                               <span class="room-amenity-pill">Chưa có tiện ích</span>
+                           {% endif %}
+                       </div>
 
-                    <div class="guest-form-grid">
-                        <div>
-                            <label>Họ tên</label>
-                            <input type="text" name="ho_ten" placeholder="Nhập họ tên">
-                        </div>
 
-                        <div>
-                            <label>Số điện thoại</label>
-                            <input type="text" name="so_dien_thoai" placeholder="Nhập số điện thoại">
-                        </div>
+                       <p>{{ data.room.MoTa if data.room.MoTa else 'Chưa có mô tả loại phòng.' }}</p>
 
-                        <div>
-                            <label>Email</label>
-                            <input type="email" name="email" placeholder="Nhập email">
-                        </div>
 
-                        <div>
-                            <label>Ghi chú</label>
-                            <input type="text" name="ghi_chu" placeholder="Ví dụ: muốn phòng tầng cao">
-                        </div>
-                    </div>
-                </form>
-            </main>
+                       <div class="booking-room-gallery-wrapper">
+                           <div class="booking-room-gallery-header">
+                               <h4>Hình ảnh loại phòng</h4>
 
-            <aside class="booking-price-card">
-                <h3>Tóm tắt giá</h3>
 
-                <div class="price-row">
-                    <span>{{ data.so_dem }} đêm x {{ "{:,.0f}".format(data.room.GiaMoiDem) }}đ x {{ data.so_phong }} phòng</span>
-                    <strong>{{ "{:,.0f}".format(data.tong_tien_phong) }}đ</strong>
-                </div>
+                               {% if data.room_images and data.room_images|length > 3 %}
+                                   <div class="booking-room-gallery-nav">
+                                       <button type="button" class="booking-room-gallery-btn" id="bookingRoomPrev">
+                                           <i class="fa-solid fa-chevron-left"></i>
+                                       </button>
+                                       <button type="button" class="booking-room-gallery-btn" id="bookingRoomNext">
+                                           <i class="fa-solid fa-chevron-right"></i>
+                                       </button>
+                                   </div>
+                               {% endif %}
+                           </div>
 
-                <div class="price-row">
-                    <span>Phí dịch vụ</span>
-                    <strong>{{ "{:,.0f}".format(data.phi_dich_vu) }}đ</strong>
-                </div>
 
-                <div class="price-total">
-<span>Tổng tiền</span>
-                    <strong>{{ "{:,.0f}".format(data.tong_tien) }}đ</strong>
-                </div>
+                           {% if data.room_images %}
+                               <div class="booking-room-gallery-viewport">
+                                   <div class="booking-room-gallery-track" id="bookingRoomGalleryTrack">
+                                       {% for image in data.room_images %}
+                                           <div class="booking-room-gallery-item">
+                                               <img src="{{ url_for('static', filename=image) }}" alt="{{ data.room.TenLoaiPhong }}">
+                                           </div>
+                                       {% endfor %}
+                                   </div>
+                               </div>
+                           {% else %}
+                               <div class="empty-box">Loại phòng này chưa có hình ảnh.</div>
+                           {% endif %}
+                       </div>
+                   </div>
+               </div>
 
-                <a href="{{ url_for(
-                   'thanh_toan_momo',
-                   hotel_id=data.hotel.MaKhachSan,
-                   room_id=data.room.MaLoaiPhong,
-                   checkin=data.checkin,
-                   checkout=data.checkout,
-                   so_nguoi_lon=data.so_nguoi_lon,
-                   so_phong=data.so_phong
-                ) }}" class="btn-proceed-payment">
+
+               <div class="booking-box">
+                   <h2>Chính sách & thông tin quan trọng</h2>
+
+
+                   <div class="policy-list">
+                       <div>
+                           <i class="fa-solid fa-circle-check"></i>
+                           <div>
+                               <strong>Chính sách hủy</strong>
+                               <p>{{ data.chinh_sach_huy_text }}</p>
+                           </div>
+                       </div>
+
+
+                       <div>
+                           <i class="fa-solid fa-circle-check"></i>
+                           <div>
+                               <strong>Xác nhận nhanh</strong>
+                               <p>Đơn đặt phòng sẽ được ghi nhận sau khi bạn xác nhận.</p>
+                           </div>
+                       </div>
+
+
+                   </div>
+               </div>
+
+
+
+
+           </main>
+
+
+           <div class="booking-price-card">
+               <h2>Tóm tắt giá</h2>
+
+
+               <div class="price-detail">
+                   {{ data.so_dem }} đêm ×
+                   {{ "{:,.0f}".format(data.room.GiaMoiDem) }}đ ×
+                   {{ data.so_phong }} phòng
+               </div>
+
+
+               <div class="price-row">
+                   <span>Tạm tính</span>
+                   <strong>{{ "{:,.0f}".format(data.tong_tien_phong) }}đ</strong>
+               </div>
+
+
+               <div class="price-divider"></div>
+
+
+               <div class="price-total">
+                   <span class="font-mon">Tổng tiền</span>
+                   <strong>{{ "{:,.0f}".format(data.tong_tien_phong) }}đ</strong>
+               </div>
+
+
+               <p class="service-fee-note">
+                   Đã bao gồm phí dịch vụ {{ "{:,.0f}".format(data.phi_dich_vu) }}đ
+               </p>
+
+
+               <a href="{{ url_for('thanh_toan_momo_theo_don', booking_id=data.booking.MaDatPhong) }}"
+                  class="btn-proceed-payment">
                    Tiếp tục thanh toán
-                </a>
+               </a>
+               <div class="countdown-wrapper">
+                   <div class="countdown-label">Giữ phòng còn lại</div>
+                   <div id="bookingHoldCountdown"
+                        class="countdown-timer"
+                        data-booking-id="{{ data.booking.MaDatPhong }}">
+                       03:00
+                   </div>
+               </div>
+           </div>
 
 
-                <p class="booking-price-note">
-                    Giá đã bao gồm phí cơ bản.
-                </p>
-            </aside>
-        </div>
-    </div>
+       </div>
+   </div>
 </section>
 {% endblock %}
+

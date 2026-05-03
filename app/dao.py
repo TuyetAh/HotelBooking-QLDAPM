@@ -12,7 +12,7 @@ from sqlalchemy import or_
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 from flask import current_app
-
+import uuid
 
 from app import db
 from app.models import (
@@ -1612,9 +1612,8 @@ def get_room_booking_data(hotel_id, room_id, checkin, checkout, so_nguoi_lon=2, 
     so_phong = int(so_phong)
 
     tong_tien_phong = room.GiaMoiDem * so_dem * so_phong
-    phi_dich_vu = tong_tien_phong * Decimal("0.05")
-    tong_tien = tong_tien_phong + phi_dich_vu
-
+    phi_dich_vu = tong_tien_phong * Decimal("0.10")
+    tong_tien = tong_tien_phong
     so_phong_con_trong = tinh_so_phong_con_trong(room, checkin_date, checkout_date)
 
     return {
@@ -1633,6 +1632,194 @@ def get_room_booking_data(hotel_id, room_id, checkin, checkout, so_nguoi_lon=2, 
         "tong_tien": tong_tien,
         "chinh_sach_huy_text": hien_thi_chinh_sach_huy(hotel.ChinhSachHuy)
     }
+def generate_booking_code():
+   last_booking = DatPhong.query.order_by(DatPhong.MaDatPhong.desc()).first()
+
+
+   if not last_booking or not last_booking.MaDatPhongCode:
+       return "DP001"
+
+
+   try:
+       number = int(last_booking.MaDatPhongCode.replace("DP", ""))
+   except:
+       number = last_booking.MaDatPhong  # fallback
+
+
+   return f"DP{number + 1:03d}"
+def create_pending_booking(user_id, hotel_id, room_id, checkin, checkout, so_nguoi_luu_tru, so_phong):
+   room = LoaiPhong.query.get(room_id)
+
+
+   if not room:
+       return False, "Không tìm thấy loại phòng."
+
+
+   checkin_date = datetime.strptime(checkin, "%Y-%m-%d").date()
+   checkout_date = datetime.strptime(checkout, "%Y-%m-%d").date()
+
+
+   so_dem = (checkout_date - checkin_date).days
+
+
+   if so_dem < 1:
+       return False, "Ngày trả phòng phải sau ngày nhận phòng ít nhất 1 ngày."
+
+
+   # kiểm tra phòng còn trống
+   so_da_dat = tinh_so_phong_da_dat(
+       ma_loai_phong=room_id,
+       checkin=checkin_date,
+       checkout=checkout_date
+   )
+
+
+   so_con_lai = room.SoLuongPhong - so_da_dat
+
+
+   if so_con_lai < so_phong:
+       return False, "Loại phòng này không còn đủ phòng trống."
+
+
+   tong_tien = Decimal(str(room.GiaMoiDem)) * so_dem * so_phong
+
+
+   booking = DatPhong(
+       MaDatPhongCode=generate_booking_code(),
+       MaNguoiDung=user_id,
+       MaKhachSan=hotel_id,
+       NgayNhanPhong=checkin_date,
+       NgayTraPhong=checkout_date,
+       SoNguoiLuuTru=so_nguoi_luu_tru,
+       TongTien=tong_tien,
+       TrangThaiDatPhong=0
+   )
+
+
+   db.session.add(booking)
+   db.session.flush()
+
+
+   detail = ChiTietDatPhong(
+       MaDatPhong=booking.MaDatPhong,
+       MaLoaiPhong=room_id,
+       SoLuongPhongDat=so_phong,
+       DonGiaMoiDem=room.GiaMoiDem,
+       SoDem=so_dem,
+       ThanhTien=tong_tien
+   )
+
+
+   db.session.add(detail)
+   db.session.commit()
+
+
+   print("ĐÃ TẠO ĐƠN:", booking.MaDatPhong, booking.MaDatPhongCode)
+
+
+   return True, booking.MaDatPhong
+
+def get_pending_booking_page_data(booking_id, user_id):
+   booking = DatPhong.query.get(booking_id)
+
+
+   if not booking:
+       print("KHÔNG TÌM THẤY BOOKING:", booking_id)
+       return None
+
+
+   print("BOOKING ID:", booking.MaDatPhong)
+   print("BOOKING USER:", booking.MaNguoiDung)
+   print("SESSION USER:", user_id)
+
+
+   if int(booking.MaNguoiDung) != int(user_id):
+       print("SAI USER")
+       return None
+
+
+   detail = ChiTietDatPhong.query.filter_by(
+       MaDatPhong=booking.MaDatPhong
+   ).first()
+
+
+   if not detail:
+       print("KHÔNG TÌM THẤY CHI TIẾT ĐẶT PHÒNG")
+       return None
+
+
+   room = LoaiPhong.query.get(detail.MaLoaiPhong)
+   hotel = KhachSan.query.get(booking.MaKhachSan)
+
+
+   if not room:
+       print("KHÔNG TÌM THẤY LOẠI PHÒNG")
+       return None
+
+
+   if not hotel:
+       print("KHÔNG TÌM THẤY KHÁCH SẠN")
+       return None
+
+
+   return {
+       "booking": booking,
+       "detail": detail,
+       "room": room,
+       "hotel": hotel,
+       "hotel_images": get_hotel_images(hotel),
+       "room_images": get_room_images(room),
+       "checkin": booking.NgayNhanPhong,
+       "checkout": booking.NgayTraPhong,
+       "so_dem": detail.SoDem,
+       "so_phong": detail.SoLuongPhongDat,
+       "so_nguoi_lon": booking.SoNguoiLuuTru,
+       "tong_tien_phong": booking.TongTien,
+       "phi_dich_vu": Decimal(str(booking.TongTien)) * Decimal("0.10")
+   }
+def delete_expired_pending_booking(booking_id, user_id):
+   booking = DatPhong.query.get(booking_id)
+
+
+   if not booking:
+       return False, "Không tìm thấy đơn."
+
+
+   if booking.MaNguoiDung != user_id:
+       return False, "Bạn không có quyền xóa đơn này."
+
+
+   if booking.TrangThaiDatPhong != 0:
+       return False, "Đơn này không còn ở trạng thái chờ thanh toán."
+
+
+   try:
+       ChiTietDatPhong.query.filter_by(MaDatPhong=booking_id).delete()
+       db.session.delete(booking)
+       db.session.commit()
+       return True, "Đã xóa đơn giữ phòng hết hạn."
+   except Exception as e:
+       db.session.rollback()
+       return False, str(e)
+
+def cleanup_expired_pending_bookings():
+   limit_time = datetime.utcnow() - timedelta(minutes=8)
+
+
+   expired_bookings = DatPhong.query.filter(
+       DatPhong.TrangThaiDatPhong == 0,
+       DatPhong.NgayTao < limit_time
+   ).all()
+
+
+   for booking in expired_bookings:
+       ChiTietDatPhong.query.filter_by(MaDatPhong=booking.MaDatPhong).delete()
+       db.session.delete(booking)
+
+
+   if expired_bookings:
+       db.session.commit()
+
 
 """TRANG QUẢNG LÝ LOẠI PHÒNG"""
 def get_room_types_management_by_hotel(ma_khach_san, tab="loai-phong"):
