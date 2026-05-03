@@ -659,7 +659,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     filterPayouts();
 });
-// Chọn lp theo đơn
+// 15. Chọn Loại Phòng theo đơn
 document.addEventListener("DOMContentLoaded", function () {
     const bookingSelect = document.getElementById("reviewBookingSelect");
     const roomInput = document.getElementById("reviewRoomId");
@@ -671,3 +671,117 @@ document.addEventListener("DOMContentLoaded", function () {
         roomInput.value = selectedOption.dataset.roomId || "";
     });
 });
+// 16. Slider ảnh lp của trang đặt phòng
+
+document.addEventListener("DOMContentLoaded", function () {
+   const track = document.getElementById("bookingRoomGalleryTrack");
+   const prevBtn = document.getElementById("bookingRoomPrev");
+   const nextBtn = document.getElementById("bookingRoomNext");
+
+
+   if (!track || !prevBtn || !nextBtn) return;
+
+
+   const items = track.querySelectorAll(".booking-room-gallery-item");
+   let currentIndex = 0;
+
+
+   function updateGallery() {
+       if (!items.length) return;
+
+
+       const itemWidth = items[0].offsetWidth;
+       const gap = 14;
+       const visibleCount = 3;
+       const maxIndex = Math.max(0, items.length - visibleCount);
+
+
+       if (currentIndex < 0) currentIndex = 0;
+       if (currentIndex > maxIndex) currentIndex = maxIndex;
+
+
+       track.style.transform = `translateX(-${currentIndex * (itemWidth + gap)}px)`;
+
+
+       prevBtn.disabled = currentIndex === 0;
+       nextBtn.disabled = currentIndex === maxIndex;
+   }
+
+
+   nextBtn.addEventListener("click", function () {
+       currentIndex++;
+       updateGallery();
+   });
+
+
+   prevBtn.addEventListener("click", function () {
+       currentIndex--;
+       updateGallery();
+   });
+
+
+   window.addEventListener("resize", updateGallery);
+
+
+   updateGallery();
+});
+
+
+//17. Đếm nguọc 3p cho giữu phòng ở trang datphong
+document.addEventListener("DOMContentLoaded", function () {
+   const countdownEl = document.getElementById("bookingHoldCountdown");
+   if (!countdownEl) return;
+
+
+   let totalSeconds = 3 * 60;
+   const bookingId = countdownEl.dataset.bookingId;
+
+
+   const timer = setInterval(function () {
+       const minutes = Math.floor(totalSeconds / 60);
+       const seconds = totalSeconds % 60;
+
+
+       countdownEl.textContent =
+           String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+
+
+       if (totalSeconds <= 0) {
+           clearInterval(timer);
+           window.location.href = `/dat-phong/${bookingId}/het-han`;
+       }
+
+
+       totalSeconds--;
+   }, 1000);
+});
+
+
+document.addEventListener("DOMContentLoaded", function () {
+   const countdownEl = document.getElementById("momoCountdown");
+   if (!countdownEl) return;
+
+
+   let totalSeconds = 5 * 60;
+   const bookingId = countdownEl.dataset.bookingId;
+
+
+   const timer = setInterval(function () {
+       const minutes = Math.floor(totalSeconds / 60);
+       const seconds = totalSeconds % 60;
+
+
+       countdownEl.textContent =
+           String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+
+
+       if (totalSeconds <= 0) {
+           clearInterval(timer);
+           window.location.href = `/dat-phong/${bookingId}/het-han`;
+       }
+
+
+       totalSeconds--;
+   }, 1000);
+});
+

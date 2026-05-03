@@ -2901,12 +2901,15 @@ a {
 }
 
 .booking-price-card {
-    background: white;
-    border-radius: 16px;
-    padding: 24px;
-    position: sticky;
-    top: 90px;
-    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.1);
+   padding: 20px;
+   border-radius: 16px;
+   background: #fff;
+   box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+.booking-price-card h2 {
+   font-size: 20px;
+   font-weight: 700;
+   margin-bottom: 16px;
 }
 
 .booking-price-card h3 {
@@ -2914,12 +2917,24 @@ a {
     margin-bottom: 20px;
 }
 
+.price-detail {
+   font-size: 14px;
+   color: #666;
+   margin-bottom: 12px;
+   line-height: 1.6;
+}
+
 .price-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 14px;
-    margin-bottom: 16px;
-    color: #4b5563;
+   display: flex;
+   justify-content: space-between;
+   margin-bottom: 10px;
+   font-size: 15px;
+}
+/* Divider */
+.price-divider {
+   height: 1px;
+   background: #eee;
+   margin: 12px 0;
 }
 
 .price-row strong {
@@ -2928,12 +2943,12 @@ a {
 }
 
 .price-total {
-    border-top: 1px solid #e5e7eb;
-    padding-top: 18px;
-    margin-top: 18px;
-    display: flex;
-    justify-content: space-between;
-    gap: 14px;
+   display: flex;
+   justify-content: space-between;
+   align-items: center;
+   font-size: 18px;
+   font-weight: 600;
+   margin-bottom: 10px;
 }
 
 .price-total span {
@@ -2941,9 +2956,14 @@ a {
 }
 
 .price-total strong {
-    font-size: 28px;
-    color: #111827;
-    white-space: nowrap;
+   font-size: 22px;
+   color: #111;
+}
+/* Ghi chú */
+.service-fee-note {
+   font-size: 13px;
+   color: #888;
+   margin-bottom: 16px;
 }
 
 .btn-proceed-payment {
@@ -3363,32 +3383,17 @@ a {
    }
 }
 .btn-proceed-payment {
+   display: block;
    width: 100%;
-   height: 52px;
-   margin-top: 24px;
-   border: none;
-   border-radius: 12px;
-
-
-   background: linear-gradient(135deg, #0d6efd, #3b82f6);
-   color: white;
-
-
-   font-family: 'Montserrat', sans-serif;
-   font-weight: 800;
-   font-size: 16px;
+   padding: 12px;
+   text-align: center;
+   background: linear-gradient(135deg, #2f80ed, #1c5ed6);
+   color: #fff;
+   border-radius: 10px;
+   font-weight: 600;
    text-decoration: none;
-
-
-   display: flex;
-   align-items: center;
-   justify-content: center;
-
-
-   cursor: pointer;
-   transition: all 0.25s ease;
+   transition: 0.3s;
 }
-
 
 .btn-proceed-payment:hover {
    background: linear-gradient(135deg, #0b5ed7, #2563eb);
@@ -3400,6 +3405,21 @@ a {
    box-shadow: none;
 }
 
+.countdown-wrapper {
+   margin-top: 12px;
+   text-align: center;
+}
+.countdown-label {
+   font-size: 14px;
+   color: #666;
+   margin-bottom: 4px;
+}
+.countdown-timer {
+   font-size: 32px;       /* TO hơn */
+   font-weight: 700;
+   color: #e53935;        /* đỏ cảnh báo */
+   letter-spacing: 2px;
+}
 
 /* Cho tab khung ở dưới của trang ql loại phòng*/
 .stat-link {
