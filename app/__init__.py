@@ -5,7 +5,8 @@ db = SQLAlchemy()
 
 def create_app():
     app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:huuky123@localhost/datphongkhachsan?charset=utf8mb4"
+    app.config[
+        "SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:Tranhoangkiet%40123@localhost/datphongkhachsan?charset=utf8mb4"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     db.init_app(app)
@@ -16,3 +17,4 @@ def create_app():
         init_admin(app)
 
     return app
+

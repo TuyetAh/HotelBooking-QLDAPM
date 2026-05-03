@@ -1775,7 +1775,8 @@ def get_pending_booking_page_data(booking_id, user_id):
        "so_phong": detail.SoLuongPhongDat,
        "so_nguoi_lon": booking.SoNguoiLuuTru,
        "tong_tien_phong": booking.TongTien,
-       "phi_dich_vu": Decimal(str(booking.TongTien)) * Decimal("0.10")
+       "phi_dich_vu": Decimal(str(booking.TongTien)) * Decimal("0.10"),
+       "tong_tien": booking.TongTien
    }
 def delete_expired_pending_booking(booking_id, user_id):
    booking = DatPhong.query.get(booking_id)
