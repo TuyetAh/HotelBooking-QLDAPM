@@ -37,8 +37,15 @@ from app.dao import (
     get_all_tien_ich_khach_san, get_hotel_by_id,
     get_reviews_by_hotel,
     get_completed_bookings_can_review,
-    create_review
+    create_review,
+    get_room_booking_data,
+    cleanup_expired_pending_bookings,
+    get_pending_booking_page_data,
+    delete_expired_pending_booking,
+    create_pending_booking
 )
+from app.models import DatPhong
+
 
 app = create_app()
 app.secret_key = "hotel_booking_secret_key"
@@ -254,7 +261,7 @@ def dang_nhap():
         user = check_login(username, password)
 
         if user:
-            session["user_id"] = user.MaNguoiDung
+            session["user_id"] = int(user.MaNguoiDung)
             session["username"] = user.TenDangNhap
             session["ho_ten"] = user.HoTen
             session["vai_tro"] = user.VaiTro
@@ -611,6 +618,12 @@ def chi_tiet_don_dat_phong_chu_ks(booking_id):
     if not data:
         flash("Không tìm thấy đơn đặt phòng.", "error")
         return redirect(url_for("index"))
+    user_id = session.get("user_id")
+    hotel_id = data["booking"].MaKhachSan
+
+    if not is_hotel_belong_to_owner(hotel_id, user_id):
+        flash("Bạn không có quyền xem đơn đặt phòng này.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
 
     return render_template(
         "owner/ChiTietDonDatPhongChuKS.html",
@@ -650,17 +663,26 @@ def xoa_loai_phong(room_id):
 # =========================================================
 @app.route("/quan-ly/dat-phong/<int:booking_id>/huy", methods=["POST"])
 def huy_don_dat_phong_chu_ks(booking_id):
+    data = get_booking_detail_for_owner(booking_id)
+
+    if not data:
+        flash("Không tìm thấy đơn đặt phòng.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+
+    user_id = session.get("user_id")
+    hotel_id = data["booking"].MaKhachSan
+
+    if not is_hotel_belong_to_owner(hotel_id, user_id):
+        flash("Bạn không có quyền hủy đơn đặt phòng này.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+
     success, message, hotel_id = cancel_booking_by_owner(booking_id)
 
     flash(message, "success" if success else "error")
-
-    if hotel_id:
-        return redirect(url_for("chi_tiet_don_dat_phong_chu_ks", booking_id=booking_id))
-
     return redirect(url_for("owner/QuanLyLoaiPhong.html"))
 
 # =========================================================
-# QUẢN LÝ LOẠI PHONGF CỦA KS, THÊM LP
+# QUẢN LÝ LOẠI PHÒNG CỦA KS, THÊM LP
 # =========================================================
 @app.route("/quan-ly/khach-san/<int:hotel_id>/loai-phong/them", methods=["GET", "POST"])
 @owner_required
@@ -730,6 +752,7 @@ def them_loai_phong(hotel_id):
 def before_request():
     auto_complete_expired_bookings()
     ensure_payouts_for_completed_bookings()
+    cleanup_expired_pending_bookings()
 
 # =========================================================
 #  ĐÁNH GIÁ VÀ NHẬN XÉT KS
@@ -764,18 +787,137 @@ def them_danh_gia_khach_san(hotel_id):
 # =========================================================
 # DẶT PHÒNG KS
 # =========================================================
-@app.route("/dat_phong/<int:hotel_id>/<int:room_id>")
+@app.route("/dat-phong/<int:hotel_id>/<int:room_id>")
 def dat_phong(hotel_id, room_id):
+   checkin = request.args.get("checkin", "").strip()
+   checkout = request.args.get("checkout", "").strip()
+   so_nguoi_lon = request.args.get("so_nguoi_lon", "2").strip()
+   so_phong = request.args.get("so_phong", "1").strip()
 
-    return render_template("DatPhong.html")
+
+   if not checkin or not checkout:
+       flash("Vui lòng chọn ngày nhận phòng và ngày trả phòng.", "error")
+       return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
+
+
+   data = get_room_booking_data(
+       hotel_id=hotel_id,
+       room_id=room_id,
+       checkin=checkin,
+       checkout=checkout,
+       so_nguoi_lon=so_nguoi_lon,
+       so_phong=so_phong
+   )
+
+
+   if not data:
+       flash("Không tìm thấy thông tin đặt phòng.", "error")
+       return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
+
+
+   if data["so_phong_con_trong"] < int(so_phong):
+       flash("Loại phòng này không còn đủ số lượng phòng trống.", "error")
+       return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
+
+
+   return render_template("DatPhong.html", data=data)
+# =========================================================
+# TẠO ĐƠN TẠM
+# =========================================================
+@app.route("/dat-phong/khoi-tao/<int:hotel_id>/<int:room_id>")
+@login_required
+def khoi_tao_dat_phong(hotel_id, room_id):
+   checkin = request.args.get("checkin")
+   checkout = request.args.get("checkout")
+   so_nguoi_lon = request.args.get("so_nguoi_lon", "1")
+   so_phong = request.args.get("so_phong", "1")
+
+
+   user_id = session.get("user_id")
+
+
+   success, result = create_pending_booking(
+       user_id=user_id,
+       hotel_id=hotel_id,
+       room_id=room_id,
+       checkin=checkin,
+       checkout=checkout,
+       so_nguoi_luu_tru=int(so_nguoi_lon),
+       so_phong=int(so_phong)
+   )
+
+
+   if not success:
+       flash(result, "error")
+       return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
+
+
+   booking_id = result
+
+
+   print("REDIRECT SANG BOOKING ID:", booking_id)
+
+
+   return redirect(url_for("dat_phong_theo_don", booking_id=booking_id))
+
+
+@app.route("/dat-phong/<int:booking_id>")
+@login_required
+def dat_phong_theo_don(booking_id):
+   print("ĐANG MỞ TRANG ĐẶT PHÒNG ID:", booking_id)
+
+
+   data = get_pending_booking_page_data(
+       booking_id=booking_id,
+       user_id=session.get("user_id")
+   )
+
+
+   if not data:
+       flash("Không tìm thấy đơn đặt phòng.", "error")
+       return redirect(url_for("index"))
+
+
+   return render_template("DatPhong.html", data=data)
+# Xóa đơn khi hết 3p
+@app.route("/dat-phong/<int:booking_id>/het-han")
+@login_required
+def het_han_giu_phong(booking_id):
+   booking = DatPhong.query.get(booking_id)
+   hotel_id = booking.MaKhachSan if booking else None
+
+
+   success, message = delete_expired_pending_booking(
+       booking_id,
+       session.get("user_id")
+   )
+
+
+   flash("Đơn giữ phòng đã hết hạn. Vui lòng đặt lại.", "error")
+
+
+   if hotel_id:
+       return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
+
+
+   return redirect(url_for("index"))
+
 
 # =========================================================
 # THANH TOÁN
 # =========================================================
-@app.route("/thanh-toan/momo/<int:hotel_id>/<int:room_id>")
-def thanh_toan_momo(hotel_id, room_id):
+@app.route("/thanh-toan/momo/<int:booking_id>")
+@login_required
+def thanh_toan_momo_theo_don(booking_id):
+   data = get_pending_booking_page_data(booking_id, session.get("user_id"))
 
-   return render_template("ThanhToanMoMo.html")
+
+   if not data:
+       flash("Không tìm thấy đơn thanh toán.", "error")
+       return redirect(url_for("index"))
+
+
+   return render_template("ThanhToanMoMo.html", data=data)
 
 
 if __name__ == "__main__":
