@@ -1241,15 +1241,42 @@ def get_hotels_by_owner(user_id):
         MaChuKhachSan=chu_ks.MaChuKhachSan
     ).order_by(KhachSan.NgayTao.desc()).all()
 
-def get_all_tien_ich_khach_san():
-    """Lấy tiện ích loại hotel."""
-    return TienIch.query.order_by(TienIch.TenTienIch.asc()).all()
+import uuid
+
+def save_hotel_images(hotel_id, files):
+    """Lưu ảnh khách sạn vào thư mục static/images/khachsan/ks_{id}"""
+    if not files:
+        return None
+
+    folder_name = f"khachsan/ks_{hotel_id}"
+    folder_path = os.path.join(
+        current_app.root_path, "static", "images", folder_name
+    )
+
+    os.makedirs(folder_path, exist_ok=True)
+
+    valid_extensions = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+    saved = 0
+
+    for file in files:
+        if not file or not file.filename:
+            continue
+
+        ext = os.path.splitext(file.filename)[1].lower()
+        if ext not in valid_extensions:
+            continue
+
+        filename = f"{saved + 1}{ext}"
+        file.save(os.path.join(folder_path, filename))
+        saved += 1
+
+    return folder_name if saved > 0 else None
 
 
 def create_hotel_full(user_id, ten_khach_san, thanh_pho, dia_chi,
                       vi_tri_noi_bat, so_dien_thoai_lien_he, mo_ta,
-                      quy_dinh_khach_san, chinh_sach_huy, ds_tien_ich):
-    """Tạo khách sạn + gắn tiện ích."""
+                      quy_dinh_khach_san, chinh_sach_huy, ds_tien_ich,
+                      files=None):  # ← thêm tham số files
     chu_ks = ChuKhachSan.query.filter_by(MaNguoiDung=user_id).first()
     if not chu_ks:
         return False, "Không tìm thấy thông tin chủ khách sạn"
@@ -1280,6 +1307,12 @@ def create_hotel_full(user_id, ten_khach_san, thanh_pho, dia_chi,
             )
             db.session.add(item)
 
+        # Lưu ảnh sau khi có hotel_id
+        if files:
+            thu_muc_anh = save_hotel_images(new_hotel.MaKhachSan, files)
+            if thu_muc_anh:
+                new_hotel.ThuMucAnh = thu_muc_anh
+
         db.session.commit()
         return True, new_hotel
     except Exception as e:
@@ -1287,7 +1320,9 @@ def create_hotel_full(user_id, ten_khach_san, thanh_pho, dia_chi,
         return False, f"Lỗi: {str(e)}"
 
 from sqlalchemy import and_
-
+def get_all_tien_ich_khach_san():
+    """Lấy tất cả tiện ích để hiển thị trong form tạo khách sạn."""
+    return TienIch.query.order_by(TienIch.TenTienIch.asc()).all()
 #Dùng cho trang tìm kiếm và nút tìm kiếm ửo trnag chủ
 def get_all_amenities():
     """
@@ -2505,3 +2540,171 @@ def create_review(ma_dat_phong, ma_nguoi_dung, ma_khach_san, so_sao, binh_luan):
 
     db.session.commit()
     return True, "Đánh giá khách sạn thành công."
+
+##=======================EDIT TÊN KS + ĐỊA CHỈ THÌ TRỞ THÀNH TRẠNG THÁI CHỜ DUYỆT=========================================================
+def update_hotel_basic_info(hotel_id, ten_khach_san, thanh_pho, dia_chi):
+    hotel = get_hotel_by_id(hotel_id)
+    if not hotel:
+        return False, "Không tìm thấy khách sạn"
+
+    da_thay_doi_thong_tin_chinh = (
+        hotel.TenKhachSan != ten_khach_san or
+        hotel.ThanhPho != thanh_pho or
+        hotel.DiaChi != dia_chi
+    )
+
+    hotel.TenKhachSan = ten_khach_san
+    hotel.ThanhPho = thanh_pho
+    hotel.DiaChi = dia_chi
+    hotel.NgayCapNhat = datetime.now()
+
+    if da_thay_doi_thong_tin_chinh and hotel.TrangThaiDuyet == 1:
+        hotel.TrangThaiDuyet = 0
+        hotel.NgayDuyet = None
+        can_duyet_lai = True
+    else:
+        can_duyet_lai = False
+
+    try:
+        db.session.commit()
+        return True, {"hotel": hotel, "can_duyet_lai": can_duyet_lai}
+    except Exception as e:
+        db.session.rollback()
+        return False, f"Lỗi: {str(e)}"
+
+    ##=============================================
+
+
+# =========================================================
+
+# Thêm import ở đầu file dao.py (nếu chưa có):
+# from datetime import datetime, date, timedelta, time
+
+def kiem_tra_co_the_huy_don(booking_id, user_id):
+    """
+    Kiểm tra khách hàng có thể hủy đơn không dựa trên chính sách khách sạn.
+
+    Chính sách hủy (ChinhSachHuy):
+    - 0 = Trước 1 ngày: phải hủy trước ngày nhận phòng ít nhất 1 ngày
+    - 1 = Trước 3 ngày: phải hủy trước ngày nhận phòng ít nhất 3 ngày
+    - 2 = Không cho hủy
+
+    Trả về: (co_the_huy: bool, ly_do: str)
+    """
+    booking = DatPhong.query.get(booking_id)
+    if not booking:
+        return False, "Không tìm thấy đơn đặt phòng"
+
+    if booking.MaNguoiDung != user_id:
+        return False, "Bạn không có quyền hủy đơn này"
+
+    if booking.TrangThaiDatPhong not in [0, 1]:
+        return False, "Đơn này không thể hủy (đã hủy hoặc đã hoàn thành)"
+
+    hotel = booking.khach_san
+    if not hotel:
+        return False, "Không tìm thấy thông tin khách sạn"
+
+    now = datetime.now()
+    checkin_datetime = datetime.combine(booking.NgayNhanPhong, time(14, 0))
+    checkout_datetime = datetime.combine(booking.NgayTraPhong, time(12, 0))
+
+    # Không cho hủy nếu đang trong thời gian lưu trú
+    if checkin_datetime <= now < checkout_datetime:
+        return False, "Không thể hủy vì khách đang trong thời gian lưu trú"
+
+    chinh_sach = hotel.ChinhSachHuy
+
+    # Không cho hủy
+    if chinh_sach == 2:
+        return False, "Khách sạn không hỗ trợ hủy phòng"
+
+    # Trước 1 ngày
+    if chinh_sach == 0:
+        deadline = checkin_datetime - timedelta(days=1)
+        if now >= deadline:
+            return False, "Đã quá hạn hủy (cần hủy trước 1 ngày so với ngày nhận phòng)"
+
+    # Trước 3 ngày
+    if chinh_sach == 1:
+        deadline = checkin_datetime - timedelta(days=3)
+        if now >= deadline:
+            return False, "Đã quá hạn hủy (cần hủy trước 3 ngày so với ngày nhận phòng)"
+
+    return True, "Có thể hủy"
+
+
+def huy_don_boi_khach_hang(booking_id, user_id, ly_do_huy=None):
+    """
+    Khách hàng hủy đơn đặt phòng:
+    - Cập nhật TrangThaiDatPhong = 2 (Đã hủy)
+    - Nếu đã thanh toán (TrangThaiDatPhong == 1): tạo bản ghi HoanTien chờ admin xử lý
+    - Nếu chưa thanh toán: chỉ hủy đơn, không tạo HoanTien
+
+    Trả về: (success: bool, message: str)
+    """
+    booking = DatPhong.query.get(booking_id)
+    if not booking:
+        return False, "Không tìm thấy đơn đặt phòng"
+
+    if booking.MaNguoiDung != user_id:
+        return False, "Bạn không có quyền hủy đơn này"
+
+    # Kiểm tra lại có thể hủy không
+    co_the_huy, ly_do = kiem_tra_co_the_huy_don(booking_id, user_id)
+    if not co_the_huy:
+        return False, ly_do
+
+    da_thanh_toan = (booking.TrangThaiDatPhong == 1)
+
+    try:
+        # Cập nhật trạng thái đơn
+        booking.TrangThaiDatPhong = 2  # Đã hủy
+
+        # Xử lý thanh toán
+        payment = ThanhToan.query.filter_by(MaDatPhong=booking_id).first()
+        if payment:
+            if da_thanh_toan:
+                payment.TrangThaiThanhToan = 3  # Đã hoàn tiền
+            else:
+                payment.TrangThaiThanhToan = 2  # Thất bại/hủy
+
+        # Nếu đã thanh toán → tạo bản ghi HoanTien chờ admin xử lý
+        if da_thanh_toan:
+            existing_refund = HoanTien.query.filter_by(MaDatPhong=booking_id).first()
+            if not existing_refund:
+                refund = HoanTien(
+                    MaDatPhong=booking_id,
+                    SoTienHoan=booking.TongTien,
+                    LyDoHoanTien=ly_do_huy or "Khách hàng yêu cầu hủy",
+                    TrangThaiHoanTien=0,  # 0 = Chờ xử lý
+                    ThoiGianHoanTien=None  # Admin sẽ xử lý sau
+                )
+                db.session.add(refund)
+
+        db.session.commit()
+
+        if da_thanh_toan:
+            return True, "Hủy đơn thành công. Yêu cầu hoàn tiền đã được gửi đến admin và sẽ được xử lý trong 1-3 ngày làm việc."
+        else:
+            return True, "Hủy đơn thành công."
+
+    except Exception as e:
+        db.session.rollback()
+        return False, f"Lỗi khi hủy đơn: {str(e)}"
+
+
+def get_booking_detail_for_customer(booking_id, user_id):
+    """
+    Lấy chi tiết đơn đặt phòng cho khách hàng.
+    Chỉ trả về nếu đơn thuộc về user_id.
+    """
+    booking = DatPhong.query.get(booking_id)
+
+    if not booking:
+        return None
+
+    if booking.MaNguoiDung != user_id:
+        return None
+
+    return booking

@@ -1,31 +1,18 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from urllib.parse import quote
-# Tạo đối tượng SQLAlchemy dùng chung cho toàn bộ project
-db = SQLAlchemy()
 
+db = SQLAlchemy()
 
 def create_app():
     app = Flask(__name__)
-
-    # Cấu hình chuỗi kết nối database SQL Server
-    # sửa lại username, password, server cho đúng máy
-
-    app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:Tranhoangkiet%40123@localhost/datphongkhachsan?charset=utf8mb4"
+    app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:huuky123@localhost/datphongkhachsan?charset=utf8mb4"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-    # Gắn db vào app
     db.init_app(app)
 
-
     with app.app_context():
-        # Import models để SQLAlchemy nhận diện các bảng
         from app import models
+        from app.admin import init_admin
+        init_admin(app)
 
     return app
-
-
-
-
-
-
