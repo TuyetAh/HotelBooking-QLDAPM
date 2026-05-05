@@ -2783,3 +2783,132 @@ def get_booking_detail_for_customer(booking_id, user_id):
         return None
 
     return booking
+
+## OTP
+import random
+import string
+from datetime import datetime, timedelta
+
+# Lưu tạm OTP trong memory (production nên dùng Redis)
+_otp_store = {}
+
+def generate_otp():
+    return ''.join(random.choices(string.digits, k=6))
+
+def luu_otp(email, otp, loai="quen_mat_khau"):
+    """Lưu OTP với thời hạn 10 phút."""
+    _otp_store[f"{loai}:{email}"] = {
+        "otp": otp,
+        "expire": datetime.now() + timedelta(minutes=10)
+    }
+
+def kiem_tra_otp(email, otp_nhap, loai="quen_mat_khau"):
+    """Kiểm tra OTP hợp lệ và chưa hết hạn."""
+    key = f"{loai}:{email}"
+    data = _otp_store.get(key)
+    if not data:
+        return False, "Mã xác nhận không tồn tại hoặc đã hết hạn"
+    if datetime.now() > data["expire"]:
+        del _otp_store[key]
+        return False, "Mã xác nhận đã hết hạn"
+    if data["otp"] != otp_nhap:
+        return False, "Mã xác nhận không đúng"
+    return True, "OK"
+
+def xoa_otp(email, loai="quen_mat_khau"):
+    key = f"{loai}:{email}"
+    if key in _otp_store:
+        del _otp_store[key]
+
+def gui_otp_quen_mat_khau(email):
+    """Gửi OTP về email để đặt lại mật khẩu."""
+    from app import mail
+    from flask_mail import Message
+
+    user = get_user_by_email(email)
+    if not user:
+        return False, "Email không tồn tại trong hệ thống"
+
+    otp = generate_otp()
+    luu_otp(email, otp, loai="quen_mat_khau")
+
+    try:
+        msg = Message(
+            subject="[Hotel Booking] Mã xác nhận đặt lại mật khẩu",
+            recipients=[email],
+            html=f"""
+            <div style="font-family:Arial,sans-serif; max-width:480px; margin:auto; padding:32px;
+                        border:1px solid #e5e7eb; border-radius:12px;">
+                <h2 style="color:#1d4ed8; margin-bottom:8px;">Đặt lại mật khẩu</h2>
+                <p style="color:#374151;">Xin chào <strong>{user.HoTen}</strong>,</p>
+                <p style="color:#374151;">Mã xác nhận của bạn là:</p>
+                <div style="background:#eff6ff; border-radius:8px; padding:20px; text-align:center;
+                            font-size:36px; font-weight:700; letter-spacing:10px; color:#1d4ed8;">
+                    {otp}
+                </div>
+                <p style="color:#6b7280; font-size:13px; margin-top:16px;">
+                    Mã có hiệu lực trong <strong>10 phút</strong>. Không chia sẻ mã này với ai.
+                </p>
+                <hr style="border:none; border-top:1px solid #e5e7eb; margin:20px 0;">
+                <p style="color:#9ca3af; font-size:12px;">Hotel Booking System</p>
+            </div>
+            """
+        )
+        mail.send(msg)
+        return True, "Đã gửi mã xác nhận"
+    except Exception as e:
+        return False, f"Lỗi gửi mail: {str(e)}"
+
+
+def gui_otp_dang_ky(email, ho_ten):
+    """Gửi OTP xác nhận đăng ký."""
+    from app import mail
+    from flask_mail import Message
+
+    otp = generate_otp()
+    luu_otp(email, otp, loai="dang_ky")
+
+    try:
+        msg = Message(
+            subject="[Hotel Booking] Mã xác nhận đăng ký tài khoản",
+            recipients=[email],
+            html=f"""
+            <div style="font-family:Arial,sans-serif; max-width:480px; margin:auto; padding:32px;
+                        border:1px solid #e5e7eb; border-radius:12px;">
+                <h2 style="color:#16a34a; margin-bottom:8px;">Xác nhận đăng ký</h2>
+                <p style="color:#374151;">Xin chào <strong>{ho_ten}</strong>,</p>
+                <p style="color:#374151;">Mã xác nhận đăng ký tài khoản của bạn là:</p>
+                <div style="background:#f0fdf4; border-radius:8px; padding:20px; text-align:center;
+                            font-size:36px; font-weight:700; letter-spacing:10px; color:#16a34a;">
+                    {otp}
+                </div>
+                <p style="color:#6b7280; font-size:13px; margin-top:16px;">
+                    Mã có hiệu lực trong <strong>10 phút</strong>.
+                </p>
+                <hr style="border:none; border-top:1px solid #e5e7eb; margin:20px 0;">
+                <p style="color:#9ca3af; font-size:12px;">Hotel Booking System</p>
+            </div>
+            """
+        )
+        mail.send(msg)
+        return True, "Đã gửi mã xác nhận"
+    except Exception as e:
+        return False, f"Lỗi gửi mail: {str(e)}"
+
+
+def dat_lai_mat_khau(email, mat_khau_moi):
+    """Đặt lại mật khẩu sau khi xác nhận OTP."""
+    from werkzeug.security import generate_password_hash
+    user = get_user_by_email(email)
+    if not user:
+        return False, "Không tìm thấy người dùng"
+
+    user.MatKhau = generate_password_hash(mat_khau_moi)
+    user.NgayCapNhat = datetime.now()
+
+    try:
+        db.session.commit()
+        return True, "Đặt lại mật khẩu thành công"
+    except Exception as e:
+        db.session.rollback()
+        return False, f"Lỗi: {str(e)}"
