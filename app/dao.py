@@ -7,6 +7,8 @@ import shutil
 from datetime import datetime
 from decimal import Decimal
 import math
+import random
+import string
 
 from sqlalchemy import or_
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -806,15 +808,65 @@ def get_review_count_by_hotel(hotel_id):
 # 9. ĐẶT PHÒNG
 # =========================================================
 
+def _generate_booking_code():
+   today = datetime.now().strftime("%Y%m%d")
+   suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+   return f"DP{today}{suffix}"
+
+def create_booking(user_id, hotel_id, room_id, checkin, checkout, so_nguoi_lon, so_phong, tong_tien):
+   try:
+       checkin_date  = datetime.strptime(checkin, "%Y-%m-%d").date()
+       checkout_date = datetime.strptime(checkout, "%Y-%m-%d").date()
+       so_dem        = (checkout_date - checkin_date).days
+
+       room = get_room_type_by_id(room_id)
+       if not room:
+           return False, "Không tìm thấy loại phòng."
+
+       code = _generate_booking_code()
+       while DatPhong.query.filter_by(MaDatPhongCode=code).first():
+           code = _generate_booking_code()
+
+       booking = DatPhong(
+           MaDatPhongCode=code,
+           MaNguoiDung=user_id,
+           MaKhachSan=hotel_id,
+           NgayNhanPhong=checkin_date,
+           NgayTraPhong=checkout_date,
+           SoNguoiLuuTru=int(so_nguoi_lon),
+           TongTien=tong_tien,
+           TrangThaiDatPhong=0
+       )
+       db.session.add(booking)
+       db.session.flush()
+
+
+       detail = ChiTietDatPhong(
+           MaDatPhong=booking.MaDatPhong,
+           MaLoaiPhong=room_id,
+           SoLuongPhongDat=int(so_phong),
+           DonGiaMoiDem=room.GiaMoiDem,
+           SoDem=so_dem,
+           ThanhTien=room.GiaMoiDem * so_dem * int(so_phong)
+       )
+       db.session.add(detail)
+       db.session.commit()
+       return True, booking
+
+   except Exception as e:
+       db.session.rollback()
+       return False, str(e)
+
+def get_booking_by_code(booking_code):
+   return DatPhong.query.filter_by(MaDatPhongCode=booking_code).first()
+
 def get_booking_by_id(booking_id):
     return DatPhong.query.get(booking_id)
-
 
 def get_bookings_by_user(user_id):
     return DatPhong.query.filter_by(MaNguoiDung=user_id).order_by(
         DatPhong.NgayTao.desc()
     ).all()
-
 
 # =========================================================
 # 10. THANH TOÁN
@@ -2300,7 +2352,7 @@ def cancel_booking_by_owner(booking_id):
             )
             db.session.add(refund)
 
-        payment.TrangThaiThanhToan = 3
+        payment.TrangThaiThanhToan = 1
 
     elif payment:
         payment.TrangThaiThanhToan = 2

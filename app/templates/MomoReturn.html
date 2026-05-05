@@ -1,0 +1,72 @@
+{% extends 'layout/base.html' %}
+
+
+{% block title %}Kết quả thanh toán{% endblock %}
+
+
+{% block content %}
+<section style="padding: 60px 0;">
+   <div class="container" style="max-width: 520px; margin: 0 auto; text-align: center;">
+
+
+       {% if success %}
+           <div style="background:#fff; border-radius:16px; padding:40px; box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+               <i class="fa-solid fa-circle-check" style="font-size:64px; color:#00b14f;"></i>
+               <h1 style="margin:20px 0 8px;">Thanh toán thành công!</h1>
+               <p style="color:#666;">Đặt phòng của bạn đã được xác nhận.</p>
+
+
+               {% if booking %}
+               <div style="background:#f7f7f7; border-radius:10px; padding:20px; margin:24px 0; text-align:left;">
+                   <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                       <span style="color:#888;">Mã đặt phòng</span>
+                       <strong>{{ booking.MaDatPhongCode }}</strong>
+                   </div>
+                   <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                       <span style="color:#888;">Khách sạn</span>
+                       <strong>{{ booking.khach_san.TenKhachSan }}</strong>
+                   </div>
+                   <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                       <span style="color:#888;">Nhận phòng</span>
+                       <strong>{{ booking.NgayNhanPhong.strftime('%d/%m/%Y') }}</strong>
+                   </div>
+                   <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                       <span style="color:#888;">Trả phòng</span>
+                       <strong>{{ booking.NgayTraPhong.strftime('%d/%m/%Y') }}</strong>
+                   </div>
+                   <div style="display:flex; justify-content:space-between; border-top:1px solid #e0e0e0; padding-top:10px; margin-top:10px;">
+                       <span style="color:#888;">Tổng tiền</span>
+                       <strong style="color:#ae2070;">{{ "{:,.0f}".format(amount) }}đ</strong>
+                   </div>
+               </div>
+               {% endif %}
+
+
+               <a href="{{ url_for('dat_phong_cua_toi') }}"
+                  style="display:inline-block; background:#ae2070; color:#fff; padding:12px 28px; border-radius:8px; text-decoration:none; font-weight:600;">
+                   Xem đơn đặt phòng
+               </a>
+           </div>
+
+
+       {% else %}
+           <div style="background:#fff; border-radius:16px; padding:40px; box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+               <i class="fa-solid fa-circle-xmark" style="font-size:64px; color:#e53935;"></i>
+               <h1 style="margin:20px 0 8px;">Thanh toán thất bại</h1>
+               <p style="color:#666;">{{ message if message else 'Giao dịch không thành công. Vui lòng thử lại.' }}</p>
+
+
+               <a href="{{ url_for('index') }}"
+                  style="display:inline-block; background:#ae2070; color:#fff; padding:12px 28px; border-radius:8px; text-decoration:none; font-weight:600; margin-top:24px;">
+                   Về trang chủ
+               </a>
+           </div>
+       {% endif %}
+
+
+   </div>
+</section>
+{% endblock %}
+
+
+

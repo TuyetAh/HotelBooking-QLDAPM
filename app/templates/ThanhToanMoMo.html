@@ -17,10 +17,12 @@
 
 
                    <div class="momo-qr-box">
-                       <div class="qr-placeholder">
-                           <i class="fa-solid fa-qrcode"></i>
-                           <span>QR MoMo</span>
-                       </div>
+                       <img src="{{ url_for('static', filename='images/momo_qr.png') }}"
+                            alt="MoMo QR Code"
+                            style="width: 220px; height: 220px; object-fit: contain;">
+                       <p style="margin-top: 8px; font-weight: 600; color: #ae2070;">
+                            Số tiền: {{ "{:,.0f}".format(data.tong_tien) }}đ
+                       </p>
                    </div>
 
 

@@ -5,8 +5,19 @@ db = SQLAlchemy()
 
 def create_app():
     app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:140522@localhost/datphongkhachsan?charset=utf8mb4"
+    app.config[
+        "SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:Tranhoangkiet%40123@localhost/datphongkhachsan?charset=utf8mb4"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+    # =========================================================
+    # MoMo Sandbox Config
+    # Thay BASE_URL bằng URL ngrok của bạn khi chạy local
+    # =========================================================
+    app.config["MOMO_PARTNER_CODE"] = "MOMO"
+    app.config["MOMO_ACCESS_KEY"] = "F8BBA842ECF85"
+    app.config["MOMO_SECRET_KEY"] = "K951B6PE1waDMi640xX08PD3vg6EkVlz"
+    app.config["MOMO_ENDPOINT"] = "https://test-payment.momo.vn/v2/gateway/api/create"
+    app.config["BASE_URL"] = "https://your-ngrok-url.ngrok-free.app"
 
     db.init_app(app)
 

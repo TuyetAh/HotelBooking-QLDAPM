@@ -47,8 +47,13 @@ from app.dao import (
     cleanup_expired_pending_bookings,
     get_pending_booking_page_data,
     delete_expired_pending_booking,
-    create_pending_booking
+    create_pending_booking,
+    create_booking,
+    get_booking_by_code,
+    create_payment
 )
+from app.momo import create_momo_payment, verify_ipn_signature
+from flask import current_app
 from app.models import DatPhong
 
 
@@ -792,40 +797,71 @@ def them_danh_gia_khach_san(hotel_id):
 # =========================================================
 # DẶT PHÒNG KS
 # =========================================================
-@app.route("/dat-phong/<int:hotel_id>/<int:room_id>")
-def dat_phong(hotel_id, room_id):
-   checkin = request.args.get("checkin", "").strip()
-   checkout = request.args.get("checkout", "").strip()
-   so_nguoi_lon = request.args.get("so_nguoi_lon", "2").strip()
-   so_phong = request.args.get("so_phong", "1").strip()
 
+@app.route("/dat_phong/<int:hotel_id>/<int:room_id>", methods=["GET", "POST"])
+@login_required
+def dat_phong(hotel_id, room_id):
+   checkin      = request.args.get("checkin", "").strip()
+   checkout     = request.args.get("checkout", "").strip()
+   so_nguoi_lon = request.args.get("so_nguoi_lon", "2").strip()
+   so_phong     = request.args.get("so_phong", "1").strip()
 
    if not checkin or not checkout:
        flash("Vui lòng chọn ngày nhận phòng và ngày trả phòng.", "error")
        return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
 
 
-   data = get_room_booking_data(
-       hotel_id=hotel_id,
-       room_id=room_id,
-       checkin=checkin,
-       checkout=checkout,
-       so_nguoi_lon=so_nguoi_lon,
-       so_phong=so_phong
-   )
-
+   data = get_room_booking_data(hotel_id, room_id, checkin, checkout, so_nguoi_lon, so_phong)
 
    if not data:
        flash("Không tìm thấy thông tin đặt phòng.", "error")
-       return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
-
-
+       return redirect(url_for("index"))
    if data["so_phong_con_trong"] < int(so_phong):
        flash("Loại phòng này không còn đủ số lượng phòng trống.", "error")
        return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
 
+   if request.method == "POST":
+       success, result = create_booking(
+           user_id=session.get("user_id"),
+           hotel_id=hotel_id,
+           room_id=room_id,
+           checkin=checkin,
+           checkout=checkout,
+           so_nguoi_lon=so_nguoi_lon,
+           so_phong=so_phong,
+           tong_tien=data["tong_tien"]
+       )
+       if not success:
+           flash(result, "error")
+           return redirect(request.url)
+
+
+       booking = result
+       base_url = current_app.config["BASE_URL"]
+       redirect_url = f"{base_url}/momo/return"
+       ipn_url      = f"{base_url}/momo/ipn"
+       order_info   = f"Dat phong {booking.MaDatPhongCode}"
+
+
+       momo_resp = create_momo_payment(
+           booking_code=booking.MaDatPhongCode,
+           amount=int(data["tong_tien"]),
+           order_info=order_info,
+           redirect_url=redirect_url,
+           ipn_url=ipn_url
+       )
+
+
+       if momo_resp.get("resultCode") == 0:
+           return redirect(momo_resp["payUrl"])
+
+
+       flash(f"Lỗi MoMo: {momo_resp.get('message', 'Không xác định')}", "error")
+       return redirect(request.url)
+
 
    return render_template("DatPhong.html", data=data)
+
 # =========================================================
 # TẠO ĐƠN TẠM
 # =========================================================
@@ -984,69 +1020,72 @@ def thanh_toan_momo_theo_don(booking_id):
 
     return redirect(momo_data["payUrl"])
 
+# =========================================================
+# MOMO RETURN — Redirect người dùng về sau khi thanh toán
+# =========================================================
 @app.route("/momo/return")
 def momo_return():
-    result_code = request.args.get("resultCode")
-    order_id = request.args.get("orderId")
-    trans_id = request.args.get("transId")
+   result_code = request.args.get("resultCode", "-1")
+   order_id    = request.args.get("orderId", "")
+   amount      = request.args.get("amount", "0")
+   message     = request.args.get("message", "")
 
-    booking = DatPhong.query.filter_by(MaDatPhongCode=order_id).first()
 
-    if not booking:
-        flash("Không tìm thấy đơn thanh toán.", "error")
-        return redirect(url_for("index"))
+   booking = get_booking_by_code(order_id)
+   success = result_code == "0"
 
-    if result_code == "0":
-        booking.TrangThaiDatPhong = 1
 
-        payment = ThanhToan.query.filter_by(MaDatPhong=booking.MaDatPhong).first()
-        if not payment:
-            payment = ThanhToan(MaDatPhong=booking.MaDatPhong)
-
-        payment.PhuongThucThanhToan = "MoMo"
-        payment.MaGiaoDich = str(trans_id)
-        payment.TrangThaiThanhToan = 1
-        payment.ThoiGianThanhToan = datetime.now()
-
-        db.session.add(payment)
-        db.session.commit()
-
-        flash("Thanh toán thành công.", "success")
-    else:
-        flash("Thanh toán chưa thành công hoặc đã bị hủy.", "error")
-
-    return redirect(url_for("chi_tiet_khach_san", hotel_id=booking.MaKhachSan))
-
-@app.route("/momo/ipn", methods=["POST"])
-def momo_ipn():
-    data = request.get_json()
-
-    order_id = data.get("orderId")
-    result_code = data.get("resultCode")
-    trans_id = data.get("transId")
-
-    booking = DatPhong.query.filter_by(MaDatPhongCode=order_id).first()
-
-    if booking and result_code == 0:
-        booking.TrangThaiDatPhong = 1
-
-        payment = ThanhToan.query.filter_by(MaDatPhong=booking.MaDatPhong).first()
-        if not payment:
-            payment = ThanhToan(MaDatPhong=booking.MaDatPhong)
-
-        payment.PhuongThucThanhToan = "MoMo"
-        payment.MaGiaoDich = str(trans_id)
-        payment.TrangThaiThanhToan = 1
-        payment.ThoiGianThanhToan = datetime.now()
-
-        db.session.add(payment)
-        db.session.commit()
-
-    return {"message": "success"}, 200
-
+   return render_template("MomoReturn.html",
+                          success=success,
+                          booking=booking,
+                          amount=int(amount),
+                          message=message)
 
 # =========================================================
+# MOMO IPN — MoMo gọi về đây sau khi thanh toán
+# =========================================================
+@app.route("/momo/ipn", methods=["POST"])
+def momo_ipn():
+   data = request.get_json(force=True) or {}
 
+
+   if not verify_ipn_signature(data):
+       return {"resultCode": 1, "message": "Invalid signature"}, 400
+
+
+   order_id    = data.get("orderId", "")
+   result_code = int(data.get("resultCode", -1))
+   trans_id    = str(data.get("transId", ""))
+   amount      = data.get("amount", 0)
+
+
+   booking = get_booking_by_code(order_id)
+   if not booking:
+       return {"resultCode": 1, "message": "Booking not found"}, 404
+
+
+   if result_code == 0:
+       create_payment(
+           ma_dat_phong=booking.MaDatPhong,
+           phuong_thuc_thanh_toan="MoMo",
+           trang_thai_thanh_toan=1,
+           so_tien_thanh_toan=amount,
+           ma_giao_dich=trans_id,
+           thoi_gian_thanh_toan=date.today()
+       )
+   else:
+       create_payment(
+           ma_dat_phong=booking.MaDatPhong,
+           phuong_thuc_thanh_toan="MoMo",
+           trang_thai_thanh_toan=2,
+           so_tien_thanh_toan=amount,
+           ma_giao_dich=trans_id
+       )
+
+
+   return {"resultCode": 0, "message": "Confirmed"}, 200
+
+# =========================================================
 # CHỈNH SỬA THÔNG TIN CƠ BẢN KHÁCH SẠN
 # =========================================================
 @app.route("/quan-ly/khach-san/<int:hotel_id>/chinh-sua", methods=["POST"])

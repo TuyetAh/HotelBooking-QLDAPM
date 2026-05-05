@@ -187,17 +187,20 @@
                <p class="service-fee-note">
                    Đã bao gồm phí dịch vụ {{ "{:,.0f}".format(data.phi_dich_vu) }}đ
                </p>
+               <form id="booking-form"
+                     action="{{ url_for('dat_phong', hotel_id=data.hotel.MaKhachSan, room_id=data.room.MaLoaiPhong, checkin=data.checkin, checkout=data.checkout, so_nguoi_lon=data.so_nguoi_lon, so_phong=data.so_phong) }}"
+                     method="POST">
+               </form>
 
+               <button type="submit" form="booking-form" class="btn-proceed-payment">
+                    Tiếp tục thanh toán
+               </button>
 
-               <a href="{{ url_for('thanh_toan_momo_theo_don', booking_id=data.booking.MaDatPhong) }}"
-                  class="btn-proceed-payment">
-                   Tiếp tục thanh toán
-               </a>
                <div class="countdown-wrapper">
                    <div class="countdown-label">Giữ phòng còn lại</div>
                    <div id="bookingHoldCountdown"
                         class="countdown-timer"
-                        data-booking-id="{{ data.booking.MaDatPhong }}">
+                        >
                        03:00
                    </div>
                </div>
