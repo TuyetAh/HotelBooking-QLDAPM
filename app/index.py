@@ -684,7 +684,7 @@ def huy_don_dat_phong_chu_ks(booking_id):
     success, message, hotel_id = cancel_booking_by_owner(booking_id)
 
     flash(message, "success" if success else "error")
-    return redirect(url_for("owner/QuanLyLoaiPhong.html"))
+    return redirect(url_for("quan_ly_loai_phong", hotel_id=hotel_id, tab="don-dat"))
 
 # =========================================================
 # QUẢN LÝ LOẠI PHÒNG CỦA KS, THÊM LP
@@ -832,11 +832,14 @@ def dat_phong(hotel_id, room_id):
 @app.route("/dat-phong/khoi-tao/<int:hotel_id>/<int:room_id>")
 @login_required
 def khoi_tao_dat_phong(hotel_id, room_id):
-   checkin = request.args.get("checkin")
-   checkout = request.args.get("checkout")
+   checkin = request.args.get("checkin", "").strip()
+   checkout = request.args.get("checkout", "").strip()
    so_nguoi_lon = request.args.get("so_nguoi_lon", "1")
    so_phong = request.args.get("so_phong", "1")
 
+   if not checkin or not checkout:
+       flash("Vui lòng chọn ngày nhận phòng và ngày trả phòng trước khi chọn phòng.", "error")
+       return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
 
    user_id = session.get("user_id")
 

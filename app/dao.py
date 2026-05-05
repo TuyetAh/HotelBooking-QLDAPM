@@ -1657,7 +1657,8 @@ def create_pending_booking(user_id, hotel_id, room_id, checkin, checkout, so_ngu
 
    checkin_date = datetime.strptime(checkin, "%Y-%m-%d").date()
    checkout_date = datetime.strptime(checkout, "%Y-%m-%d").date()
-
+   if not checkin or not checkout:
+       return False, "Vui lòng chọn ngày nhận phòng và ngày trả phòng."
 
    so_dem = (checkout_date - checkin_date).days
 
@@ -2282,6 +2283,27 @@ def cancel_booking_by_owner(booking_id):
         booking.NgayTraPhong,
         time(12, 0)
     )
+
+    payment = ThanhToan.query.filter_by(MaDatPhong=booking_id).first()
+
+    # chỉ tạo hoàn tiền nếu đơn đã thanh toán r
+    if payment and payment.TrangThaiThanhToan == 1:
+        existed_refund = HoanTien.query.filter_by(MaDatPhong=booking_id).first()
+
+        if not existed_refund:
+            refund = HoanTien(
+                MaDatPhong=booking_id,
+                SoTienHoan=booking.TongTien,
+                LyDoHoanTien="KS hủy đơn",
+                TrangThaiHoanTien=0,  # Chờ xử lý
+                ThoiGianHoanTien=None
+            )
+            db.session.add(refund)
+
+        payment.TrangThaiThanhToan = 3
+
+    elif payment:
+        payment.TrangThaiThanhToan = 2
 
     # Nếu đang trong thời gian lưu trú thì không cho hủy
     if checkin_datetime <= now < checkout_datetime:
