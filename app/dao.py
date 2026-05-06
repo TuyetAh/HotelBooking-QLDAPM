@@ -1295,8 +1295,8 @@ def get_hotels_by_owner(user_id):
 
 import uuid
 
-def save_hotel_images(hotel_id, files):
-    """Lưu ảnh khách sạn vào thư mục static/images/khachsan/ks_{id}"""
+def save_hotel_images(hotel_id, files, clear_existing=False):
+    """Lưu ảnh khách sạn. Nếu clear_existing=True thì xóa ảnh cũ trước."""
     if not files:
         return None
 
@@ -1307,19 +1307,26 @@ def save_hotel_images(hotel_id, files):
 
     os.makedirs(folder_path, exist_ok=True)
 
+    # Xóa ảnh cũ nếu được yêu cầu (dùng khi tạo mới để tránh tồn đọng file test)
+    if clear_existing:
+        valid_extensions = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+        for f in os.listdir(folder_path):
+            if os.path.splitext(f)[1].lower() in valid_extensions:
+                os.remove(os.path.join(folder_path, f))
+
     valid_extensions = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+    next_index = get_next_image_index(folder_path)  # dùng lại hàm đã có
     saved = 0
 
     for file in files:
         if not file or not file.filename:
             continue
-
         ext = os.path.splitext(file.filename)[1].lower()
         if ext not in valid_extensions:
             continue
-
-        filename = f"{saved + 1}{ext}"
+        filename = f"{next_index}{ext}"
         file.save(os.path.join(folder_path, filename))
+        next_index += 1
         saved += 1
 
     return folder_name if saved > 0 else None
@@ -1361,7 +1368,7 @@ def create_hotel_full(user_id, ten_khach_san, thanh_pho, dia_chi,
 
         # Lưu ảnh sau khi có hotel_id
         if files:
-            thu_muc_anh = save_hotel_images(new_hotel.MaKhachSan, files)
+            thu_muc_anh = save_hotel_images(new_hotel.MaKhachSan, files, clear_existing=True)
             if thu_muc_anh:
                 new_hotel.ThuMucAnh = thu_muc_anh
 
@@ -2912,3 +2919,5 @@ def dat_lai_mat_khau(email, mat_khau_moi):
     except Exception as e:
         db.session.rollback()
         return False, f"Lỗi: {str(e)}"
+
+    ## Edit Thong tin khach san

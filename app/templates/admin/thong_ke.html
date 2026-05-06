@@ -4,7 +4,7 @@
 <div style="padding:24px; background:#f4f6f9; min-height:100vh;">
 
     <h2 style="margin-bottom:24px; font-weight:700; color:#111827;">
-        📊 Thống kê chi tiết
+         Thống kê chi tiết
     </h2>
 <!-- EXPORT PANEL -->
 <div style="background:#fff; border-radius:12px; padding:20px 24px;
@@ -15,9 +15,7 @@
             <p style="font-weight:600; color:#111827; margin:0 0 4px;">
                  Xuất báo cáo Excel
             </p>
-            <p style="color:#6b7280; font-size:13px; margin:0;">
-                Chọn khách sạn muốn xuất (bỏ trống = xuất tất cả)
-            </p>
+
         </div>
         <button onclick="toggleExportPanel()"
                 style="background:#16a34a; color:#fff; border:none; border-radius:8px;
@@ -111,102 +109,200 @@
         </div>
     </div>
 
-    <!-- BẢNG THỐNG KÊ TỪNG KHÁCH SẠN -->
-    <div style="background:#fff; border-radius:12px; padding:24px;
-                box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-        <h4 style="margin-bottom:20px; color:#111827;">
-            Chi tiết tài chính từng khách sạn
-        </h4>
-
-        <div style="overflow-x:auto;">
-            <table style="width:100%; border-collapse:collapse; font-size:14px;">
-                <thead>
-                    <tr style="background:#f9fafb;">
-                        <th style="padding:12px; text-align:left; color:#6b7280;
-                                   font-weight:600; white-space:nowrap;">Khách sạn</th>
-                        <th style="padding:12px; text-align:right; color:#6b7280;
-                                   font-weight:600; white-space:nowrap;">Tổng doanh thu</th>
-                        <th style="padding:12px; text-align:right; color:#6b7280;
-                                   font-weight:600; white-space:nowrap;">Cần chuyển owner</th>
-                        <th style="padding:12px; text-align:right; color:#6b7280;
-                                   font-weight:600; white-space:nowrap;">Đã chuyển owner</th>
-                        <th style="padding:12px; text-align:right; color:#6b7280;
-                                   font-weight:600; white-space:nowrap;">Phí hệ thống</th>
-                        <th style="padding:12px; text-align:right; color:#6b7280;
-                                   font-weight:600; white-space:nowrap;">Cần hoàn tiền</th>
-                        <th style="padding:12px; text-align:right; color:#6b7280;
-                                   font-weight:600; white-space:nowrap;">Đã hoàn tiền</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in thong_ke_ks %}
-                    <tr style="border-top:1px solid #f3f4f6;">
-                        <td style="padding:12px; font-weight:600; color:#111827;">
-                            {{ item.ks.TenKhachSan }}
-                            <br>
-                            <span style="font-size:12px; color:#6b7280; font-weight:400;">
-                                {{ item.ks.ThanhPho }}
-                            </span>
-                        </td>
-                        <td style="padding:12px; text-align:right; font-weight:600; color:#111827;">
-                            {{ "{:,.0f}".format(item.tong_doanh_thu) }} đ
-                        </td>
-                        <td style="padding:12px; text-align:right;">
-                            {% if item.can_chuyen > 0 %}
-                                <span style="color:#d97706; font-weight:600;">
-                                    {{ "{:,.0f}".format(item.can_chuyen) }} đ
-                                </span>
-                            {% else %}
-                                <span style="color:#6b7280;">—</span>
-                            {% endif %}
-                        </td>
-                        <td style="padding:12px; text-align:right; color:#16a34a; font-weight:600;">
-                            {{ "{:,.0f}".format(item.da_chuyen) }} đ
-                        </td>
-                        <td style="padding:12px; text-align:right; color:#0d6efd; font-weight:600;">
-                            {{ "{:,.0f}".format(item.phi_he_thong) }} đ
-                        </td>
-                        <td style="padding:12px; text-align:right;">
-                            {% if item.can_hoan > 0 %}
-                                <span style="color:#dc2626; font-weight:600;">
-                                    {{ "{:,.0f}".format(item.can_hoan) }} đ
-                                </span>
-                            {% else %}
-                                <span style="color:#6b7280;">—</span>
-                            {% endif %}
-                        </td>
-                        <td style="padding:12px; text-align:right; color:#16a34a; font-weight:600;">
-                            {{ "{:,.0f}".format(item.da_hoan) }} đ
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot>
-                    <tr style="background:#f9fafb; border-top:2px solid #e5e7eb;">
-                        <td style="padding:12px; font-weight:700;">Tổng cộng</td>
-                        <td style="padding:12px; text-align:right; font-weight:700;">
-                            {{ "{:,.0f}".format(thong_ke_ks | sum(attribute='tong_doanh_thu')) }} đ
-                        </td>
-                        <td style="padding:12px; text-align:right; font-weight:700; color:#d97706;">
-                            {{ "{:,.0f}".format(thong_ke_ks | sum(attribute='can_chuyen')) }} đ
-                        </td>
-                        <td style="padding:12px; text-align:right; font-weight:700; color:#16a34a;">
-                            {{ "{:,.0f}".format(thong_ke_ks | sum(attribute='da_chuyen')) }} đ
-                        </td>
-                        <td style="padding:12px; text-align:right; font-weight:700; color:#0d6efd;">
-                            {{ "{:,.0f}".format(thong_ke_ks | sum(attribute='phi_he_thong')) }} đ
-                        </td>
-                        <td style="padding:12px; text-align:right; font-weight:700; color:#dc2626;">
-                            {{ "{:,.0f}".format(thong_ke_ks | sum(attribute='can_hoan')) }} đ
-                        </td>
-                        <td style="padding:12px; text-align:right; font-weight:700; color:#16a34a;">
-                            {{ "{:,.0f}".format(thong_ke_ks | sum(attribute='da_hoan')) }} đ
-                        </td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
+<!-- BẢNG THỐNG KÊ TỪNG KHÁCH SẠN -->
+<div style="background:#fff; border-radius:12px; padding:24px;
+            box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+        <h4 style="margin:0; color:#111827;">Chi tiết tài chính từng khách sạn</h4>
+        <span id="pageInfo" style="font-size:13px; color:#6b7280;"></span>
     </div>
+
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:14px;">
+            <thead>
+                <tr style="background:#dbeafe;">
+                    <th style="padding:13px 16px; text-align:left; color:#1e40af; font-weight:700;
+                               white-space:nowrap; border-top:2px solid #93c5fd; border-bottom:2px solid #93c5fd;">
+                        Khách sạn
+                    </th>
+                    <th style="padding:13px 16px; text-align:right; color:#1e40af; font-weight:700;
+                               white-space:nowrap; border-top:2px solid #93c5fd; border-bottom:2px solid #93c5fd;">
+                        Tổng doanh thu
+                    </th>
+                    <th style="padding:13px 16px; text-align:right; color:#1e40af; font-weight:700;
+                               white-space:nowrap; border-top:2px solid #93c5fd; border-bottom:2px solid #93c5fd;">
+                        Cần chuyển owner
+                    </th>
+                    <th style="padding:13px 16px; text-align:right; color:#1e40af; font-weight:700;
+                               white-space:nowrap; border-top:2px solid #93c5fd; border-bottom:2px solid #93c5fd;">
+                        Đã chuyển owner
+                    </th>
+                    <th style="padding:13px 16px; text-align:right; color:#1e40af; font-weight:700;
+                               white-space:nowrap; border-top:2px solid #93c5fd; border-bottom:2px solid #93c5fd;">
+                        Phí hệ thống
+                    </th>
+                    <th style="padding:13px 16px; text-align:right; color:#1e40af; font-weight:700;
+                               white-space:nowrap; border-top:2px solid #93c5fd; border-bottom:2px solid #93c5fd;">
+                        Cần hoàn tiền
+                    </th>
+                    <th style="padding:13px 16px; text-align:right; color:#1e40af; font-weight:700;
+                               white-space:nowrap; border-top:2px solid #93c5fd; border-bottom:2px solid #93c5fd;">
+                        Đã hoàn tiền
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                {% for item in thong_ke_ks %}
+                <tr class="data-row" style="border-top:1px solid #f3f4f6; display:none;">
+                    <td style="padding:12px 16px; font-weight:600; color:#111827;">
+                        {{ item.ks.TenKhachSan }}
+                        <br>
+                        <span style="font-size:12px; color:#6b7280; font-weight:400;">
+                            {{ item.ks.ThanhPho }}
+                        </span>
+                    </td>
+                    <td style="padding:12px 16px; text-align:right; font-weight:600; color:#111827;">
+                        {{ "{:,.0f}".format(item.tong_doanh_thu) }} đ
+                    </td>
+                    <td style="padding:12px 16px; text-align:right;">
+                        {% if item.can_chuyen > 0 %}
+                            <span style="color:#d97706; font-weight:600;">
+                                {{ "{:,.0f}".format(item.can_chuyen) }} đ
+                            </span>
+                        {% else %}
+                            <span style="color:#6b7280;">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:12px 16px; text-align:right; color:#16a34a; font-weight:600;">
+                        {{ "{:,.0f}".format(item.da_chuyen) }} đ
+                    </td>
+                    <td style="padding:12px 16px; text-align:right; color:#0d6efd; font-weight:600;">
+                        {{ "{:,.0f}".format(item.phi_he_thong) }} đ
+                    </td>
+                    <td style="padding:12px 16px; text-align:right;">
+                        {% if item.can_hoan > 0 %}
+                            <span style="color:#dc2626; font-weight:600;">
+                                {{ "{:,.0f}".format(item.can_hoan) }} đ
+                            </span>
+                        {% else %}
+                            <span style="color:#6b7280;">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:12px 16px; text-align:right; color:#16a34a; font-weight:600;">
+                        {{ "{:,.0f}".format(item.da_hoan) }} đ
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot id="tableFoot">
+                <tr style="background:#eff6ff; border-top:2px solid #93c5fd; display:none;">
+                    <td style="padding:13px 16px; font-weight:700; color:#1e40af;">Tổng cộng</td>
+                    <td style="padding:13px 16px; text-align:right; font-weight:700; color:#111827;">
+                        {{ "{:,.0f}".format(thong_ke_ks | sum(attribute='tong_doanh_thu')) }} đ
+                    </td>
+                    <td style="padding:13px 16px; text-align:right; font-weight:700; color:#d97706;">
+                        {{ "{:,.0f}".format(thong_ke_ks | sum(attribute='can_chuyen')) }} đ
+                    </td>
+                    <td style="padding:13px 16px; text-align:right; font-weight:700; color:#16a34a;">
+                        {{ "{:,.0f}".format(thong_ke_ks | sum(attribute='da_chuyen')) }} đ
+                    </td>
+                    <td style="padding:13px 16px; text-align:right; font-weight:700; color:#0d6efd;">
+                        {{ "{:,.0f}".format(thong_ke_ks | sum(attribute='phi_he_thong')) }} đ
+                    </td>
+                    <td style="padding:13px 16px; text-align:right; font-weight:700; color:#dc2626;">
+                        {{ "{:,.0f}".format(thong_ke_ks | sum(attribute='can_hoan')) }} đ
+                    </td>
+                    <td style="padding:13px 16px; text-align:right; font-weight:700; color:#16a34a;">
+                        {{ "{:,.0f}".format(thong_ke_ks | sum(attribute='da_hoan')) }} đ
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <!-- PAGINATION -->
+    <div style="display:flex; align-items:center; justify-content:space-between;
+                margin-top:16px; padding-top:16px; border-top:1px solid #f3f4f6;">
+        <span id="rowInfo" style="font-size:13px; color:#6b7280;"></span>
+        <div style="display:flex; gap:6px;" id="paginationBtns"></div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const PER_PAGE = 5;
+    let currentPage = 1;
+    const rows = Array.from(document.querySelectorAll('.data-row'));
+    const totalRows = rows.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / PER_PAGE));
+    const footRow = document.querySelector('#tableFoot tr');
+
+    function showPage(page) {
+        currentPage = page;
+        rows.forEach((row, i) => {
+            const start = (page - 1) * PER_PAGE;
+            const end = start + PER_PAGE;
+            row.style.display = (i >= start && i < end) ? '' : 'none';
+        });
+
+        // Dòng tổng chỉ hiện ở trang cuối
+        if (footRow) {
+            footRow.style.display = (page === totalPages) ? '' : 'none';
+        }
+
+        const start = (page - 1) * PER_PAGE + 1;
+        const end = Math.min(page * PER_PAGE, totalRows);
+        document.getElementById('rowInfo').textContent =
+            totalRows > 0 ? `Hiển thị ${start}–${end} / ${totalRows} khách sạn` : 'Không có dữ liệu';
+        document.getElementById('pageInfo').textContent =
+            totalRows > 0 ? `Trang ${page} / ${totalPages}` : '';
+
+        renderPagination();
+    }
+
+    function renderPagination() {
+        const container = document.getElementById('paginationBtns');
+        container.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        const btnStyle = (active) => `
+            padding:6px 13px; border-radius:7px; font-size:13px; cursor:pointer;
+            border:1px solid ${active ? '#2563eb' : '#d1d5db'};
+            background:${active ? '#2563eb' : '#fff'};
+            color:${active ? '#fff' : '#374151'}; font-weight:${active ? '700' : '500'};
+            transition: all 0.15s;
+        `;
+
+        // Trước
+        const prev = document.createElement('button');
+        prev.textContent = '←';
+        prev.disabled = currentPage === 1;
+        prev.style.cssText = btnStyle(false) + (currentPage===1 ? 'opacity:0.4;cursor:default;' : '');
+        prev.onclick = () => { if (currentPage > 1) showPage(currentPage - 1); };
+        container.appendChild(prev);
+
+        // Số trang
+        for (let p = 1; p <= totalPages; p++) {
+            const btn = document.createElement('button');
+            btn.textContent = p;
+            btn.style.cssText = btnStyle(p === currentPage);
+            btn.onclick = (function(pg) { return () => showPage(pg); })(p);
+            container.appendChild(btn);
+        }
+
+        // Sau
+        const next = document.createElement('button');
+        next.textContent = '→';
+        next.disabled = currentPage === totalPages;
+        next.style.cssText = btnStyle(false) + (currentPage===totalPages ? 'opacity:0.4;cursor:default;' : '');
+        next.onclick = () => { if (currentPage < totalPages) showPage(currentPage + 1); };
+        container.appendChild(next);
+    }
+
+    showPage(1);
+})();
+</script>
 
 </div>
 
@@ -242,25 +338,38 @@ new Chart(document.getElementById('chartThang'), {
     }
 });
 
-// Biểu đồ quý
+// Biểu đồ quý — PIE
 new Chart(document.getElementById('chartQuy'), {
-    type: 'bar',
+    type: 'pie',
     data: {
         labels: ['Quý 1', 'Quý 2', 'Quý 3', 'Quý 4'],
         datasets: [{
-            label: 'Doanh thu (đ)',
             data: doanhThuQuy,
-            backgroundColor: ['rgba(22,163,74,0.7)','rgba(13,110,253,0.7)',
-                               'rgba(217,119,6,0.7)','rgba(220,38,38,0.7)'],
-            borderRadius: 6
+            backgroundColor: [
+                'rgba(22,163,74,0.8)',
+                'rgba(13,110,253,0.8)',
+                'rgba(217,119,6,0.8)',
+                'rgba(220,38,38,0.8)'
+            ],
+            borderColor: ['#fff','#fff','#fff','#fff'],
+            borderWidth: 3
         }]
     },
     options: {
-        plugins: { legend: { display: false } },
-        scales: {
-            y: {
-                ticks: {
-                    callback: v => (v/1000000).toFixed(1) + 'M'
+        plugins: {
+            legend: {
+                display: true,
+                position: 'bottom',
+                labels: { font: { size: 13 }, padding: 16 }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(ctx) {
+                        const val = ctx.parsed;
+                        const total = ctx.dataset.data.reduce((a,b) => a+b, 0);
+                        const pct = total > 0 ? ((val/total)*100).toFixed(1) : 0;
+                        return ` ${(val/1000000).toFixed(2)}M đ (${pct}%)`;
+                    }
                 }
             }
         }

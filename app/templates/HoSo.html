@@ -84,9 +84,22 @@
                                         <span class="badge badge-info">Hoàn thành</span>
                                     {% endif %}
                                 </td>
+
+                                <!-- NÚT HÀNH ĐỘNG -->
                                 <td>
-                                    <a href="{{ url_for('chi_tiet_don_khach_hang', booking_id=b.MaDatPhong) }}"
-                                       class="btn-detail">Chi tiết</a>
+                                    <div style="display:flex; gap:8px; align-items:center;">
+                                        <!-- Nút Chi tiết (luôn hiển thị) -->
+                                        <a href="{{ url_for('chi_tiet_don_khach_hang', booking_id=b.MaDatPhong) }}"
+                                           class="btn-detail">Chi tiết</a>
+
+                                        <!-- Nút Đánh giá (chỉ hiện khi đơn hoàn thành - TrangThaiDatPhong == 3) -->
+                                        {% if b.TrangThaiDatPhong == 3 %}
+                                            <a href="{{ url_for('chi_tiet_khach_san', hotel_id=b.MaKhachSan) }}#danh-gia"
+                                               class="btn-review">
+                                                ⭐ Đánh giá
+                                            </a>
+                                        {% endif %}
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -262,6 +275,22 @@
 }
 .btn-detail:hover { background: #dbeafe; }
 
+/* NÚT ĐÁNH GIÁ — chỉ hiện khi đơn hoàn thành */
+.btn-review {
+    display: inline-block;
+    padding: 5px 12px;
+    background: #fffbeb;
+    color: #92400e;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid #fde68a;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+.btn-review:hover { background: #fef3c7; color: #78350f; }
+
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -303,5 +332,10 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
         if (e.target === this) hideModal(this.id);
     });
 });
+
+// Tự động mở tab lịch sử nếu URL có hash #lich-su
+if (window.location.hash === '#lich-su') {
+    document.querySelector('[onclick="showTab(\'lich-su\')"]').click();
+}
 </script>
 {% endblock %}

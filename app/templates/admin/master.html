@@ -1,0 +1,508 @@
+{% extends 'admin/base.html' %}
+
+{% block head_css %}
+    {{ super() }}
+    <style>
+        /* ================================================
+           RESET & BASE
+        ================================================ */
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif !important;
+            background: #f0f2f5 !important;
+        }
+
+        /* ================================================
+           NAVBAR → Header xanh
+        ================================================ */
+        .navbar {
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;
+            border: none !important;
+            box-shadow: 0 2px 12px rgba(37,99,235,0.3) !important;
+            padding: 0 24px !important;
+            min-height: 60px !important;
+        }
+
+        .navbar .navbar-brand {
+            color: #fff !important;
+            font-size: 20px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.5px !important;
+            padding: 0 !important;
+            line-height: 60px !important;
+        }
+
+        .navbar .navbar-brand:hover { opacity: 0.9; }
+
+        .navbar .navbar-nav > li > a {
+            color: rgba(255,255,255,0.85) !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            padding: 0 16px !important;
+            line-height: 60px !important;
+            transition: color 0.2s !important;
+        }
+
+        .navbar .navbar-nav > li > a:hover,
+        .navbar .navbar-nav > li.active > a {
+            color: #fff !important;
+            background: rgba(255,255,255,0.12) !important;
+            border-radius: 6px !important;
+        }
+
+        .navbar .navbar-nav > li > a .caret { border-top-color: rgba(255,255,255,0.85) !important; }
+
+        /* Dropdown menu */
+        .navbar .dropdown-menu {
+            background: #fff !important;
+            border: none !important;
+            border-radius: 10px !important;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+            padding: 6px !important;
+            margin-top: 4px !important;
+            min-width: 180px !important;
+        }
+
+        .navbar .dropdown-menu > li > a {
+            color: #374151 !important;
+            font-size: 13px !important;
+            padding: 8px 14px !important;
+            border-radius: 6px !important;
+            transition: background 0.15s !important;
+        }
+
+        .navbar .dropdown-menu > li > a:hover {
+            background: #eff6ff !important;
+            color: #1d4ed8 !important;
+        }
+
+        /* ================================================
+           ADMIN INFO + NÚT ĐĂNG XUẤT trong navbar
+        ================================================ */
+        .admin-navbar-info {
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+            height: 60px !important;
+            margin-left: auto !important;
+            padding: 0 8px !important;
+            float: right !important;
+        }
+
+        .admin-navbar-info .admin-name {
+            font-size: 13px !important;
+            color: rgba(255,255,255,0.9) !important;
+            font-weight: 500 !important;
+            white-space: nowrap !important;
+        }
+
+        .admin-navbar-info .btn-logout {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            padding: 6px 14px !important;
+            border-radius: 8px !important;
+            background: rgba(255,255,255,0.15) !important;
+            color: #fff !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            text-decoration: none !important;
+            border: 1px solid rgba(255,255,255,0.3) !important;
+            transition: background .15s !important;
+            white-space: nowrap !important;
+        }
+
+        .admin-navbar-info .btn-logout:hover {
+            background: rgba(255,255,255,0.28) !important;
+            color: #fff !important;
+            text-decoration: none !important;
+        }
+
+        /* ================================================
+           SIDEBAR
+        ================================================ */
+        .nav-sidebar {
+            background: #fff !important;
+            border-right: 1px solid #e5e7eb !important;
+            min-height: calc(100vh - 60px) !important;
+            padding: 16px 8px !important;
+            width: 220px !important;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.04) !important;
+        }
+
+        .nav-sidebar > li > a {
+            color: #4b5563 !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            padding: 10px 16px !important;
+            border-radius: 8px !important;
+            margin-bottom: 2px !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            transition: all 0.15s !important;
+        }
+
+        .nav-sidebar > li > a:hover {
+            background: #eff6ff !important;
+            color: #1d4ed8 !important;
+        }
+
+        .nav-sidebar > li.active > a,
+        .nav-sidebar > li > a.active {
+            background: #eff6ff !important;
+            color: #1d4ed8 !important;
+            font-weight: 600 !important;
+        }
+
+        /* Category header */
+        .nav-sidebar .nav-header {
+            color: #9ca3af !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.8px !important;
+            padding: 12px 16px 6px !important;
+            margin-top: 8px !important;
+        }
+
+        /* ================================================
+           MAIN CONTENT
+        ================================================ */
+        .col-md-9, .col-sm-9 {
+            padding: 24px !important;
+        }
+
+        /* ================================================
+           PAGE HEADER (tiêu đề trang list/edit)
+        ================================================ */
+        .page-header {
+            background: #fff !important;
+            border: none !important;
+            border-radius: 12px !important;
+            padding: 20px 24px !important;
+            margin-bottom: 20px !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+        }
+
+        .page-header h1 {
+            color: #111827 !important;
+            font-size: 20px !important;
+            font-weight: 700 !important;
+            margin: 0 !important;
+        }
+
+        /* ================================================
+           PANEL / BẢNG
+        ================================================ */
+        .panel {
+            border: none !important;
+            border-radius: 12px !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+            overflow: hidden !important;
+        }
+
+        .panel-default { background: #fff !important; }
+
+        .panel-heading {
+            background: #f9fafb !important;
+            border-bottom: 1px solid #f3f4f6 !important;
+            padding: 14px 20px !important;
+            color: #374151 !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+        }
+
+        .panel-body { padding: 0 !important; }
+
+        /* ================================================
+           TABLE
+        ================================================ */
+        .table {
+            margin: 0 !important;
+            font-size: 13px !important;
+        }
+
+        .table > thead > tr > th {
+            background: #f9fafb !important;
+            color: #6b7280 !important;
+            font-weight: 600 !important;
+            font-size: 12px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            border-bottom: 1px solid #e5e7eb !important;
+            padding: 12px 16px !important;
+            border-top: none !important;
+        }
+
+        .table > tbody > tr > td {
+            padding: 12px 16px !important;
+            border-color: #f3f4f6 !important;
+            color: #374151 !important;
+            vertical-align: middle !important;
+        }
+
+        .table-hover > tbody > tr:hover > td {
+            background: #f8faff !important;
+        }
+
+        .table-striped > tbody > tr:nth-of-type(odd) > td {
+            background: #fafafa !important;
+        }
+
+        /* ================================================
+           BUTTONS
+        ================================================ */
+        .btn {
+            border-radius: 8px !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            padding: 7px 16px !important;
+            transition: all 0.2s !important;
+            border: none !important;
+        }
+
+        .btn-primary {
+            background: #2563eb !important;
+            color: #fff !important;
+            box-shadow: 0 2px 6px rgba(37,99,235,0.3) !important;
+        }
+        .btn-primary:hover { background: #1d4ed8 !important; transform: translateY(-1px); }
+
+        .btn-success {
+            background: #16a34a !important;
+            color: #fff !important;
+        }
+        .btn-success:hover { background: #15803d !important; }
+
+        .btn-danger {
+            background: #dc2626 !important;
+            color: #fff !important;
+        }
+        .btn-danger:hover { background: #b91c1c !important; }
+
+        .btn-warning {
+            background: #d97706 !important;
+            color: #fff !important;
+        }
+
+        .btn-default {
+            background: #fff !important;
+            color: #374151 !important;
+            border: 1px solid #d1d5db !important;
+        }
+        .btn-default:hover { background: #f9fafb !important; }
+
+        .btn-sm { padding: 5px 12px !important; font-size: 12px !important; }
+
+        /* Action buttons trong table */
+        .btn-group .btn { border-radius: 6px !important; margin: 0 1px !important; }
+
+        /* ================================================
+           FORM
+        ================================================ */
+        .form-control {
+            border: 1px solid #d1d5db !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            font-size: 13px !important;
+            color: #374151 !important;
+            box-shadow: none !important;
+            transition: border-color 0.2s !important;
+        }
+
+        .form-control:focus {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important;
+            outline: none !important;
+        }
+
+        .control-label {
+            color: #374151 !important;
+            font-weight: 600 !important;
+            font-size: 13px !important;
+        }
+
+        .form-group { margin-bottom: 16px !important; }
+
+        /* ================================================
+           FILTERS / SEARCH
+        ================================================ */
+        .filters-row {
+            background: #fff !important;
+            border-radius: 10px !important;
+            padding: 12px 16px !important;
+            margin-bottom: 16px !important;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+        }
+
+        /* ================================================
+           PAGINATION
+        ================================================ */
+        .pagination > li > a,
+        .pagination > li > span {
+            color: #374151 !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 6px !important;
+            margin: 0 2px !important;
+            padding: 6px 12px !important;
+            font-size: 13px !important;
+        }
+
+        .pagination > li > a:hover {
+            background: #eff6ff !important;
+            color: #1d4ed8 !important;
+            border-color: #bfdbfe !important;
+        }
+
+        .pagination > .active > a,
+        .pagination > .active > span {
+            background: #2563eb !important;
+            border-color: #2563eb !important;
+            color: #fff !important;
+        }
+
+        /* ================================================
+           ALERTS / FLASH
+        ================================================ */
+        .alert {
+            border: none !important;
+            border-radius: 10px !important;
+            padding: 12px 16px !important;
+            font-size: 13px !important;
+        }
+
+        .alert-success {
+            background: #dcfce7 !important;
+            color: #166534 !important;
+        }
+
+        .alert-danger, .alert-error {
+            background: #fee2e2 !important;
+            color: #991b1b !important;
+        }
+
+        .alert-info {
+            background: #dbeafe !important;
+            color: #1e40af !important;
+        }
+
+        .alert-warning {
+            background: #fef3c7 !important;
+            color: #92400e !important;
+        }
+
+        /* ================================================
+           LABELS / BADGES
+        ================================================ */
+        .label {
+            border-radius: 20px !important;
+            padding: 4px 10px !important;
+            font-size: 11px !important;
+            font-weight: 600 !important;
+        }
+
+        .label-success { background: #dcfce7 !important; color: #166534 !important; }
+        .label-danger  { background: #fee2e2 !important; color: #991b1b !important; }
+        .label-warning { background: #fef3c7 !important; color: #92400e !important; }
+        .label-info    { background: #dbeafe !important; color: #1e40af !important; }
+        .label-primary { background: #eff6ff !important; color: #1d4ed8 !important; }
+
+        /* ================================================
+           BREADCRUMB
+        ================================================ */
+        .breadcrumb {
+            background: transparent !important;
+            padding: 0 0 8px 0 !important;
+            font-size: 13px !important;
+        }
+
+        .breadcrumb > li > a { color: #2563eb !important; }
+        .breadcrumb > .active { color: #6b7280 !important; }
+        .breadcrumb > li + li:before { color: #d1d5db !important; }
+
+        /* ================================================
+           SELECT2 (nếu Flask-Admin dùng)
+        ================================================ */
+        .select2-container .select2-choice,
+        .select2-container-multi .select2-choices {
+            border: 1px solid #d1d5db !important;
+            border-radius: 8px !important;
+        }
+
+        /* ================================================
+           MODAL
+        ================================================ */
+        .modal-content {
+            border: none !important;
+            border-radius: 14px !important;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15) !important;
+        }
+
+        .modal-header {
+            background: #f9fafb !important;
+            border-bottom: 1px solid #e5e7eb !important;
+            border-radius: 14px 14px 0 0 !important;
+            padding: 16px 20px !important;
+        }
+
+        .modal-title {
+            color: #111827 !important;
+            font-weight: 700 !important;
+            font-size: 15px !important;
+        }
+
+        .modal-footer {
+            border-top: 1px solid #e5e7eb !important;
+            padding: 12px 20px !important;
+        }
+
+        /* ================================================
+           SCROLLBAR
+        ================================================ */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* ================================================
+           RESPONSIVE
+        ================================================ */
+        @media (max-width: 768px) {
+            .col-md-9 { padding: 12px !important; }
+        }
+    </style>
+{% endblock %}
+
+{% block tail %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Tìm navbar container
+    var navbar = document.querySelector('.navbar-collapse') || document.querySelector('.navbar-inner') || document.querySelector('.navbar');
+    if (!navbar) return;
+
+    // Tạo div chứa tên admin + nút đăng xuất
+    var div = document.createElement('div');
+    div.className = 'admin-navbar-info';
+    div.innerHTML = `
+        <span class="admin-name">
+            👤 <strong>{{ session.get('admin_ho_ten', session.get('admin_username', 'Admin')) }}</strong>
+        </span>
+        <a href="/admin/logout" class="btn-logout">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Đăng xuất
+        </a>
+    `;
+
+    navbar.appendChild(div);
+});
+</script>
+{% endblock %}

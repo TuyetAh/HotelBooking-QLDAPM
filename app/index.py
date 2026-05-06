@@ -428,6 +428,8 @@ def tao_khach_san():
         chinh_sach_huy = request.form.get("chinh_sach_huy", 0)
         ds_tien_ich = request.form.getlist("tien_ich")
 
+        files = request.files.getlist("hotel_images")
+
         if not ten_khach_san or not thanh_pho or not dia_chi or not so_dien_thoai_lien_he:
             return render_template("owner/TaoKhachSan.html",
                                    tien_ichs=tien_ichs,
@@ -443,7 +445,8 @@ def tao_khach_san():
             mo_ta=mo_ta,
             quy_dinh_khach_san=quy_dinh_khach_san,
             chinh_sach_huy=chinh_sach_huy,
-            ds_tien_ich=ds_tien_ich
+            ds_tien_ich=ds_tien_ich,
+            files=files
         )
 
         if success:
@@ -1444,6 +1447,85 @@ def dat_lai_mat_khau_route():
 
     flash("Đặt lại mật khẩu thành công! Vui lòng đăng nhập.", "success")
     return redirect(url_for("dang_nhap"))
+
+
+## Edit thong tin khach san
+@app.route("/quan-ly/khach-san/<int:hotel_id>/them-anh", methods=["POST"])
+@owner_required
+def them_anh_khach_san(hotel_id):
+    from flask import jsonify
+    user_id = session.get("user_id")
+    if not is_hotel_belong_to_owner(hotel_id, user_id):
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "message": "Không có quyền."}), 403
+        flash("Bạn không có quyền thao tác với khách sạn này.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+
+    files = request.files.getlist("hotel_images")
+    if not files or files[0].filename == "":
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "message": "Vui lòng chọn ít nhất một ảnh."}), 400
+        flash("Vui lòng chọn ít nhất một ảnh.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+
+    from app.dao import save_hotel_images, cap_nhat_thu_muc_anh_khach_san
+    thu_muc_anh = save_hotel_images(hotel_id, files)
+
+    hotel = get_hotel_by_id(hotel_id)
+    if hotel and not hotel.ThuMucAnh and thu_muc_anh:
+        cap_nhat_thu_muc_anh_khach_san(hotel_id, thu_muc_anh)
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "message": "Thêm ảnh thành công."}), 200
+
+    flash("Thêm ảnh thành công.", "success")
+    return redirect(url_for("chu_khach_san_dashboard"))
+
+
+@app.route("/quan-ly/khach-san/<int:hotel_id>/xoa-anh", methods=["POST"])
+@owner_required
+def xoa_anh_khach_san(hotel_id):
+    user_id = session.get("user_id")
+    if not is_hotel_belong_to_owner(hotel_id, user_id):
+        flash("Bạn không có quyền thao tác với khách sạn này.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+
+    filename = request.form.get("filename")
+    hotel = get_hotel_by_id(hotel_id)
+
+    if not hotel or not hotel.ThuMucAnh:
+        flash("Không tìm thấy thư mục ảnh.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+
+    from app.dao import delete_room_image  # hàm này dùng được cho cả KS
+    success, message = delete_room_image(hotel.ThuMucAnh, filename)
+    flash(message, "success" if success else "error")
+    return redirect(url_for("chu_khach_san_dashboard"))
+
+@app.route("/quan-ly/khach-san/<int:hotel_id>/danh-sach-anh")
+@owner_required
+def danh_sach_anh_khach_san(hotel_id):
+    from flask import jsonify
+    user_id = session.get("user_id")
+    if not is_hotel_belong_to_owner(hotel_id, user_id):
+        return jsonify({"images": []}), 403
+
+    hotel = get_hotel_by_id(hotel_id)
+    if not hotel or not hotel.ThuMucAnh:
+        return jsonify({"images": []}), 200
+
+    from app.dao import get_room_image_list
+    images = get_room_image_list(hotel.ThuMucAnh)
+    # get_room_image_list trả về [{"filename": "1.jpg", "url": "images/..."}]
+    # renderImages trong JS dùng item.path và item.filename
+    # nên cần map lại: path = url (bỏ prefix "images/")
+    result = []
+    for img in images:
+        result.append({
+            "filename": img["filename"],
+            "path": img["url"]   # url đã có dạng "images/khachsan/ks_1/1.jpg"
+        })
+    return jsonify({"images": result}), 200
 
 if __name__ == "__main__":
     app.run(debug=True)
