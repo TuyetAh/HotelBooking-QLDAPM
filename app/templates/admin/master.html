@@ -477,6 +477,7 @@
 
 {% block tail %}
 {{ super() }}
+{% if session.get('admin_logged_in') %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     // Tìm navbar container
@@ -505,4 +506,5 @@ document.addEventListener('DOMContentLoaded', function () {
     navbar.appendChild(div);
 });
 </script>
+{% endif %}
 {% endblock %}
