@@ -62,6 +62,16 @@ document.addEventListener('DOMContentLoaded', function () {
     navRight.appendChild(li);
 });
 </script>
+<script>
+// Tự động thêm enctype multipart cho form có file input
+document.addEventListener('DOMContentLoaded', function () {
+    var fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(function(input) {
+        var form = input.closest('form');
+        if (form) form.enctype = 'multipart/form-data';
+    });
+});
+</script>
 {% endblock %}
 
 {% block body %}

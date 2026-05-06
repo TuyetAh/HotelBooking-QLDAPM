@@ -7,9 +7,13 @@ from flask_admin.form import BaseForm
 from flask import flash
 from sqlalchemy import func
 from app import db
-from wtforms import PasswordField
+from flask import request as req
+from app.dao import save_room_images
+import os
+from flask import current_app
 from wtforms.validators import Optional, Length
 from flask_admin import BaseView
+from wtforms import PasswordField, FileField
 from app.models import (
     NguoiDung, ChuKhachSan, KhachSan,
     TienIch, LoaiPhong, DatPhong,
@@ -307,10 +311,43 @@ class LoaiPhongView(SecureModelView):
     }
     form_columns = [
         "khach_san", "TenLoaiPhong", "MoTa",
-        "GiaMoiDem", "SoNguoiToiDa", "SoLuongPhong", "ThuMucAnh", "TrangThaiHoatDong",
+        "GiaMoiDem", "SoNguoiToiDa", "SoLuongPhong", "TrangThaiHoatDong",
+        "room_images",   # <-- phải có trong form_columns mới hiện ra
     ]
+    form_extra_fields = {
+        "room_images": FileField("Ảnh loại phòng")
+    }
+    form_widget_args = {
+        "room_images": {"multiple": True}   # cho phép chọn nhiều ảnh
+    }
     can_export = True
     page_size  = 20
+
+    def on_form_prefill(self, form, id):
+        # Đảm bảo form có enctype multipart khi edit
+        pass
+
+    def create_form(self, obj=None):
+        form = super().create_form(obj)
+        return form
+
+    def after_model_change(self, form, model, is_created):
+        # Nếu chưa có ThuMucAnh thì tạo (giống create_room_type trong dao.py)
+        if not model.ThuMucAnh:
+            model.ThuMucAnh = f"loaiphong/lp_{model.MaLoaiPhong}"
+            folder_path = os.path.join(
+                current_app.root_path,
+                "static", "images",
+                model.ThuMucAnh
+            )
+            os.makedirs(folder_path, exist_ok=True)
+
+            from app import db
+            db.session.commit()
+
+        files = req.files.getlist("room_images")
+        if files and files[0].filename != "":
+            save_room_images(model.ThuMucAnh, files)
 
 
 class DatPhongView(SecureModelView):
