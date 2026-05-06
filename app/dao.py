@@ -1221,7 +1221,7 @@ def get_featured_hotels(limit=None):
     query = KhachSan.query.filter(
         KhachSan.TrangThaiDuyet == 1,
         KhachSan.TrangThaiHoatDong == 1,
-        KhachSan.DiemDanhGiaTrungBinh > 8.5
+        KhachSan.DiemDanhGiaTrungBinh > 4.0
     ).order_by(
         KhachSan.DiemDanhGiaTrungBinh.desc(),
         KhachSan.NgayTao.desc()
@@ -1535,12 +1535,12 @@ def search_hotels_advanced(
 
         # Lọc theo mức đánh giá
         if so_sao not in (None, ""):
-            so_sao_int = int(so_sao)
-            if so_sao_int == 5 and hotel.DiemDanhGiaTrungBinh < 9:
+            so_sao_float = float(so_sao)
+            if so_sao_float == 5 and hotel.DiemDanhGiaTrungBinh < 4.5:
                 continue
-            elif so_sao_int == 4 and hotel.DiemDanhGiaTrungBinh < 8:
+            elif so_sao_float == 4 and hotel.DiemDanhGiaTrungBinh < 4:
                 continue
-            elif so_sao_int == 3 and hotel.DiemDanhGiaTrungBinh < 7:
+            elif so_sao_float == 3 and hotel.DiemDanhGiaTrungBinh < 3.5:
                 continue
 
         filtered_hotels.append(hotel)

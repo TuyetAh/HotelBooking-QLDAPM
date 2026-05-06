@@ -358,6 +358,7 @@ a {
     color: #fff;
     font-weight: 700;
     font-size: 14px;
+    gap: 5px;
 }
 
 .hotel-review-text {
@@ -3915,6 +3916,6 @@ a {
     }
 }
 .booking-form{
-   background: white;
+    background: white;
 }
 

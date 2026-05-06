@@ -7,7 +7,7 @@ mail = Mail()
 
 def create_app():
     app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:huuky123@localhost/datphongkhachsan?charset=utf8mb4"
+    app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:140522@localhost/datphongkhachsan?charset=utf8mb4"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     # Cấu hình Gmail SMTP

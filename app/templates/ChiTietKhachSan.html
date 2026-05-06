@@ -235,8 +235,8 @@
 
                 {% if data.reviews %}
                     <div class="review-average">
-                        <strong>{{ "%.1f"|format(data.hotel.DiemDanhGiaTrungBinh or 0) }}</strong>
-                        <span>/ 10.0</span>
+                        <strong>{{ "%.2f"|format(data.hotel.DiemDanhGiaTrungBinh or 0) }}</strong>
+                        <span>/ 5.0</span>
                     </div>
                 {% endif %}
             </div>
