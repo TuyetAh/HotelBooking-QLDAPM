@@ -3,6 +3,9 @@ from flask import render_template, request, redirect, url_for, session, flash
 from functools import wraps
 from app import create_app
 import math
+import hmac
+import hashlib
+import requests
 from datetime import date, timedelta, datetime
 from app.dao import (
     build_hotel_card_data,
@@ -59,7 +62,8 @@ from app.dao import (
     create_pending_booking,
     create_booking,
     get_booking_by_code,
-    create_payment
+    create_payment,
+    check_room_available_before_payment
 )
 from app.momo import create_momo_payment, verify_ipn_signature
 from flask import current_app
@@ -805,6 +809,34 @@ def dat_phong(hotel_id, room_id):
        return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
 
    if request.method == "POST":
+       can_pay, message = check_room_available_before_payment(
+           hotel_id=hotel_id,
+           room_id=room_id,
+           checkin=checkin,
+           checkout=checkout,
+           so_nguoi_lon=so_nguoi_lon,
+           so_phong=so_phong
+       )
+
+       if not can_pay:
+           flash(message, "error")
+           return redirect(url_for(
+               "chi_tiet_khach_san",
+               hotel_id=hotel_id,
+               checkin=checkin,
+               checkout=checkout,
+               so_nguoi_lon=so_nguoi_lon,
+               so_phong=so_phong
+           ))
+
+       data = get_room_booking_data(
+           hotel_id,
+           room_id,
+           checkin,
+           checkout,
+           so_nguoi_lon,
+           so_phong
+       )
        success, result = create_booking(
            user_id=session.get("user_id"),
            hotel_id=hotel_id,
@@ -815,6 +847,7 @@ def dat_phong(hotel_id, room_id):
            so_phong=so_phong,
            tong_tien=data["tong_tien"]
        )
+
        if not success:
            flash(result, "error")
            return redirect(request.url)
@@ -996,14 +1029,8 @@ def huy_don_khach_hang(booking_id):
     flash(message, "success" if success else "error")
     return redirect(url_for("chi_tiet_don_khach_hang", booking_id=booking_id))
 #
-import hmac
-import hashlib
-import json
-import requests
-from datetime import datetime
 
 MOMO_ENDPOINT = "https://test-payment.momo.vn/v2/gateway/api/create"
-
 MOMO_PARTNER_CODE = "MOMOBKUN20180529"
 MOMO_ACCESS_KEY = "F9A2..."
 MOMO_SECRET_KEY = "S8K..."
@@ -1033,7 +1060,7 @@ def thanh_toan_momo_theo_don(booking_id):
     order_info = f"Thanh toán đặt phòng {order_id}"
 
     # Sử dụng BASE_URL từ config (ngrok)
-    base_url = app.config.get("BASE_URL")
+    base_url = app.config["BASE_URL"]
     redirect_url = f"{base_url}/momo/return"
     ipn_url = f"{base_url}/momo/ipn"
 

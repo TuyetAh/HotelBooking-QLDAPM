@@ -1657,6 +1657,73 @@ def get_available_room_types_by_hotel(hotel_id, checkin=None, checkout=None, so_
             })
 
     return available_rooms
+def check_room_available_before_payment(hotel_id, room_id, checkin, checkout, so_nguoi_lon, so_phong):
+   room = get_room_type_by_id(room_id)
+   hotel = get_hotel_by_id(hotel_id)
+
+
+   if not hotel:
+       return False, "Không tìm thấy khách sạn."
+
+
+   if not room:
+       return False, "Không tìm thấy loại phòng."
+
+
+   if room.MaKhachSan != hotel.MaKhachSan:
+       return False, "Loại phòng không thuộc khách sạn này."
+
+
+   if hotel.TrangThaiDuyet != 1 or hotel.TrangThaiHoatDong != 1:
+       return False, "Khách sạn hiện không khả dụng để đặt phòng."
+
+
+   if room.TrangThaiHoatDong != 1:
+       return False, "Loại phòng này hiện đã dừng hoạt động."
+
+
+   if not checkin or not checkout:
+       return False, "Vui lòng chọn ngày nhận phòng và ngày trả phòng."
+
+
+   try:
+       checkin_date = datetime.strptime(checkin, "%Y-%m-%d").date()
+       checkout_date = datetime.strptime(checkout, "%Y-%m-%d").date()
+       so_nguoi_lon = int(so_nguoi_lon)
+       so_phong = int(so_phong)
+   except Exception:
+       return False, "Thông tin đặt phòng không hợp lệ."
+
+
+   if checkout_date <= checkin_date:
+       return False, "Ngày trả phòng phải sau ngày nhận phòng."
+
+
+   if so_nguoi_lon < 1:
+       return False, "Số người lưu trú phải lớn hơn 0."
+
+
+   if so_phong < 1:
+       return False, "Số lượng phòng phải lớn hơn 0."
+
+
+   if so_nguoi_lon > room.SoNguoiToiDa:
+       return False, "Số người vượt quá sức chứa tối đa của loại phòng."
+
+
+   so_phong_con_trong = tinh_so_phong_con_trong(
+       room,
+       checkin_date,
+       checkout_date
+   )
+
+
+   if so_phong_con_trong < so_phong:
+       return False, f"Loại phòng {room.TenLoaiPhong} chỉ còn {so_phong_con_trong} phòng trống trong khoảng ngày đã chọn."
+
+
+   return True, "Phòng vẫn còn trống."
+
 def get_room_booking_data(hotel_id, room_id, checkin, checkout, so_nguoi_lon=2, so_phong=1):
     hotel = get_hotel_by_id(hotel_id)
     room = get_room_type_by_id(room_id)

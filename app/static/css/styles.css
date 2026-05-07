@@ -3922,32 +3922,3 @@ a {
     object-fit: cover;
     display: block;
 }
-
-.navbar-right {
-    display: flex !important;
-    align-items: center;
-    gap: 12px;
-    margin-right: 8px;
-}
-.admin-info {
-    font-size: 13px;
-    color: rgba(255,255,255,0.9);
-    font-weight: 500;
-}
-.btn-logout {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border-radius: 8px;
-    background: rgba(255,255,255,0.15);
-    color: #fff !important;
-    font-size: 13px;
-    font-weight: 600;
-    text-decoration: none !important;
-    border: 1px solid rgba(255,255,255,0.3);
-    transition: background .15s;
-}
-.btn-logout:hover {
-    background: rgba(255,255,255,0.28);
-}
