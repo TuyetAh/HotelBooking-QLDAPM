@@ -881,19 +881,12 @@ def khoi_tao_dat_phong(hotel_id, room_id):
 
 
    booking_id = result
-
-
-   print("REDIRECT SANG BOOKING ID:", booking_id)
-
-
    return redirect(url_for("dat_phong_theo_don", booking_id=booking_id))
 
 
 @app.route("/dat-phong/<int:booking_id>")
 @login_required
 def dat_phong_theo_don(booking_id):
-   print("ĐANG MỞ TRANG ĐẶT PHÒNG ID:", booking_id)
-
 
    data = get_pending_booking_page_data(
        booking_id=booking_id,
@@ -930,141 +923,6 @@ def het_han_giu_phong(booking_id):
 
    return redirect(url_for("index"))
 
-
-# # =========================================================
-# # THANH TOÁN
-# # =========================================================
-# @app.route("/thanh-toan/momo/<int:booking_id>")
-# @login_required
-# def thanh_toan_momo_theo_don(booking_id):
-#     data = get_pending_booking_page_data(booking_id, session.get("user_id"))
-#
-#     if not data:
-#         flash("Không tìm thấy đơn thanh toán.", "error")
-#         return redirect(url_for("index"))
-#
-#     booking = data["booking"]
-#
-#     if booking.TrangThaiDatPhong != 0:
-#         flash("Đơn này không còn chờ thanh toán.", "error")
-#         return redirect(url_for("index"))
-#
-#     amount = int(booking.TongTien)
-#     order_id = booking.MaDatPhongCode
-#     request_id = f"{order_id}_{int(datetime.now().timestamp())}"
-#     order_info = f"Thanh toán đặt phòng {order_id}"
-#
-#     redirect_url = url_for("momo_return", _external=True)
-#     ipn_url = url_for("momo_ipn", _external=True)
-#
-#     request_type = "captureWallet"
-#     extra_data = ""
-#
-#     raw_signature = (
-#         f"accessKey={MOMO_ACCESS_KEY}"
-#         f"&amount={amount}"
-#         f"&extraData={extra_data}"
-#         f"&ipnUrl={ipn_url}"
-#         f"&orderId={order_id}"
-#         f"&orderInfo={order_info}"
-#         f"&partnerCode={MOMO_PARTNER_CODE}"
-#         f"&redirectUrl={redirect_url}"
-#         f"&requestId={request_id}"
-#         f"&requestType={request_type}"
-#     )
-#
-#     signature = hmac.new(
-#         MOMO_SECRET_KEY.encode("utf-8"),
-#         raw_signature.encode("utf-8"),
-#         hashlib.sha256
-#     ).hexdigest()
-#
-#     payload = {
-#         "partnerCode": MOMO_PARTNER_CODE,
-#         "partnerName": "Hotel Booking",
-#         "storeId": "HotelBookingStore",
-#         "requestId": request_id,
-#         "amount": amount,
-#         "orderId": order_id,
-#         "orderInfo": order_info,
-#         "redirectUrl": redirect_url,
-#         "ipnUrl": ipn_url,
-#         "lang": "vi",
-#         "extraData": extra_data,
-#         "requestType": request_type,
-#         "signature": signature
-#     }
-#
-#     res = requests.post(MOMO_ENDPOINT, json=payload, timeout=30)
-#     momo_data = res.json()
-#
-#     if momo_data.get("resultCode") != 0:
-#         flash("Không tạo được thanh toán MoMo: " + momo_data.get("message", ""), "error")
-#         return redirect(url_for("dat_phong_theo_don", booking_id=booking_id))
-#
-#     return redirect(momo_data["payUrl"])
-#
-# @app.route("/momo/return")
-# def momo_return():
-#     result_code = request.args.get("resultCode")
-#     order_id = request.args.get("orderId")
-#     trans_id = request.args.get("transId")
-#
-#     booking = DatPhong.query.filter_by(MaDatPhongCode=order_id).first()
-#
-#     if not booking:
-#         flash("Không tìm thấy đơn thanh toán.", "error")
-#         return redirect(url_for("index"))
-#
-#     if result_code == "0":
-#         booking.TrangThaiDatPhong = 1
-#
-#         payment = ThanhToan.query.filter_by(MaDatPhong=booking.MaDatPhong).first()
-#         if not payment:
-#             payment = ThanhToan(MaDatPhong=booking.MaDatPhong)
-#
-#         payment.PhuongThucThanhToan = "MoMo"
-#         payment.MaGiaoDich = str(trans_id)
-#         payment.TrangThaiThanhToan = 1
-#         payment.ThoiGianThanhToan = datetime.now()
-#
-#         db.session.add(payment)
-#         db.session.commit()
-#
-#         flash("Thanh toán thành công.", "success")
-#     else:
-#         flash("Thanh toán chưa thành công hoặc đã bị hủy.", "error")
-#
-#     return redirect(url_for("chi_tiet_khach_san", hotel_id=booking.MaKhachSan))
-#
-# @app.route("/momo/ipn", methods=["POST"])
-# def momo_ipn():
-#     data = request.get_json()
-#
-#     order_id = data.get("orderId")
-#     result_code = data.get("resultCode")
-#     trans_id = data.get("transId")
-#
-#     booking = DatPhong.query.filter_by(MaDatPhongCode=order_id).first()
-#
-#     if booking and result_code == 0:
-#         booking.TrangThaiDatPhong = 1
-#
-#         payment = ThanhToan.query.filter_by(MaDatPhong=booking.MaDatPhong).first()
-#         if not payment:
-#             payment = ThanhToan(MaDatPhong=booking.MaDatPhong)
-#
-#         payment.PhuongThucThanhToan = "MoMo"
-#         payment.MaGiaoDich = str(trans_id)
-#         payment.TrangThaiThanhToan = 1
-#         payment.ThoiGianThanhToan = datetime.now()
-#
-#         db.session.add(payment)
-#         db.session.commit()
-#
-#     return {"message": "success"}, 200
-#
-#
 # # =========================================================
 #
 # # CHỈNH SỬA THÔNG TIN CƠ BẢN KHÁCH SẠN
@@ -1151,7 +1009,8 @@ MOMO_ACCESS_KEY = "F9A2..."
 MOMO_SECRET_KEY = "S8K..."
 
 
-
+# =========================================================
+# THANH TOÁN MOMO
 # =========================================================
 @app.route("/thanh-toan/momo/<int:booking_id>")
 @login_required
@@ -1173,8 +1032,10 @@ def thanh_toan_momo_theo_don(booking_id):
     request_id = f"{order_id}_{int(datetime.now().timestamp())}"
     order_info = f"Thanh toán đặt phòng {order_id}"
 
-    redirect_url = url_for("momo_return", _external=True)
-    ipn_url = url_for("momo_ipn", _external=True)
+    # Sử dụng BASE_URL từ config (ngrok)
+    base_url = app.config.get("BASE_URL")
+    redirect_url = f"{base_url}/momo/return"
+    ipn_url = f"{base_url}/momo/ipn"
 
     request_type = "captureWallet"
     extra_data = ""
@@ -1223,66 +1084,71 @@ def thanh_toan_momo_theo_don(booking_id):
 
     return redirect(momo_data["payUrl"])
 
+
 # =========================================================
-# MOMO RETURN — Redirect người dùng về sau khi thanh toán
+# MOMO RETURN — Sau khi thanh toán xong
 # =========================================================
 @app.route("/momo/return")
 def momo_return():
-   result_code = request.args.get("resultCode", "-1")
-   order_id    = request.args.get("orderId", "")
-   amount      = request.args.get("amount", "0")
-   message     = request.args.get("message", "")
-   booking = get_booking_by_code(order_id)
-   success = result_code == "0"
-   return render_template("MomoReturn.html",
-                          success=success,
-                          booking=booking,
-                          amount=int(amount),
-                          message=message)
+    result_code = request.args.get("resultCode", "-1")
+    order_id = request.args.get("orderId", "")
+    amount = request.args.get("amount", "0")
+    message = request.args.get("message", "")
+
+    booking = get_booking_by_code(order_id)
+    success = result_code == "0"
+
+    if success and booking:
+        flash("Thanh toán thành công! Cảm ơn bạn đã đặt phòng.", "success")
+        # Chuyển sang trang chi tiết đơn đẹp
+        return redirect(url_for("chi_tiet_don_khach_hang", booking_id=booking.MaDatPhong))
+
+    # Trường hợp thất bại
+    return render_template("MomoReturn.html",
+                           success=success,
+                           booking=booking,
+                           amount=int(amount) if amount.isdigit() else 0,
+                           message=message)
+
 
 # =========================================================
-# MOMO IPN — MoMo gọi về đây sau khi thanh toán
+# MOMO IPN — MoMo gọi backend
 # =========================================================
 @app.route("/momo/ipn", methods=["POST"])
 def momo_ipn():
-   data = request.get_json(force=True) or {}
+    data = request.get_json(force=True) or {}
 
+    if not verify_ipn_signature(data):
+        return {"resultCode": 1, "message": "Invalid signature"}, 400
 
-   if not verify_ipn_signature(data):
-       return {"resultCode": 1, "message": "Invalid signature"}, 400
+    order_id = data.get("orderId", "")
+    result_code = int(data.get("resultCode", -1))
+    trans_id = str(data.get("transId", ""))
+    amount = data.get("amount", 0)
 
+    booking = get_booking_by_code(order_id)
+    if not booking:
+        return {"resultCode": 1, "message": "Booking not found"}, 404
 
-   order_id    = data.get("orderId", "")
-   result_code = int(data.get("resultCode", -1))
-   trans_id    = str(data.get("transId", ""))
-   amount      = data.get("amount", 0)
+    if result_code == 0:
+        create_payment(
+            ma_dat_phong=booking.MaDatPhong,
+            phuong_thuc_thanh_toan="MoMo",
+            trang_thai_thanh_toan=1,
+            so_tien_thanh_toan=amount,
+            ma_giao_dich=trans_id,
+            thoi_gian_thanh_toan=date.today()
+        )
+    else:
+        create_payment(
+            ma_dat_phong=booking.MaDatPhong,
+            phuong_thuc_thanh_toan="MoMo",
+            trang_thai_thanh_toan=2,
+            so_tien_thanh_toan=amount,
+            ma_giao_dich=trans_id
+        )
 
-
-   booking = get_booking_by_code(order_id)
-   if not booking:
-       return {"resultCode": 1, "message": "Booking not found"}, 404
-
-
-   if result_code == 0:
-       create_payment(
-           ma_dat_phong=booking.MaDatPhong,
-           phuong_thuc_thanh_toan="MoMo",
-           trang_thai_thanh_toan=1,
-           so_tien_thanh_toan=amount,
-           ma_giao_dich=trans_id,
-           thoi_gian_thanh_toan=date.today()
-       )
-   else:
-       create_payment(
-           ma_dat_phong=booking.MaDatPhong,
-           phuong_thuc_thanh_toan="MoMo",
-           trang_thai_thanh_toan=2,
-           so_tien_thanh_toan=amount,
-           ma_giao_dich=trans_id
-       )
-
-
-   return {"resultCode": 0, "message": "Confirmed"}, 200
+    return {"resultCode": 0, "message": "Confirmed"}, 200
 
 # =========================================================
 # =========================================================
