@@ -276,10 +276,6 @@ a {
     min-height: 130px;
 }
 
-
-
-
-
 .destination-text h3 {
     font-size: 26px;
     margin-bottom: 4px;
@@ -358,6 +354,7 @@ a {
     color: #fff;
     font-weight: 700;
     font-size: 14px;
+    gap: 5px;
 }
 
 .hotel-review-text {
@@ -631,7 +628,6 @@ a {
 }
 
 
-/* ===== SEARCH SELECTOR: NGƯỜI LỚN / PHÒNG ===== */
 .guest-room-selector-wrapper {
     position: relative;
 }
@@ -834,7 +830,6 @@ a {
 }
 
 
-/* ===== TRANG TÌM KIẾM ===== */
 .search-page {
     padding: 28px 0 50px;
     background: #f4f6f9;
@@ -1143,7 +1138,6 @@ a {
     }
 }
 
-/* Cho ảnh của trang tim kiếm ks */
 .search-result-gallery {
     display: flex;
     flex-direction: column;
@@ -1211,7 +1205,6 @@ a {
 
 
 
-/* Cho phần tooltip của mục +n khi mà ks đó có qá nhìu tiện ích í */
 .result-amenities {
     display: flex;
     flex-wrap: wrap;
@@ -1301,7 +1294,6 @@ a {
 }
 
 
-/* Cho phần tooltip tiện ích , nhưng mà cho nó tự nới size khung tooltip nếu có qá nhìu tiện ích thì sẽ k gãy */
 @media (max-width: 768px) {
     .amenity-popup {
         right: auto;
@@ -1321,7 +1313,7 @@ a {
         max-height: 200px;
     }
 }
-/*Cho Phân trang */
+
 .pagination {
     display: flex;
     justify-content: center;
@@ -1354,7 +1346,7 @@ a {
     border-color: #0d6efd;
     color: #0d6efd;
 }
-/* ===== CHI TIẾT KHÁCH SẠN ===== */
+
 .hotel-detail-page {
     padding: 38px 0 70px;
     background: #f4f6f9;
@@ -1374,9 +1366,6 @@ a {
     color: #64748b;
     font-size: 15px;
 }
-
-
-
 
 .gallery-small-grid {
     height: 100%;
@@ -1441,7 +1430,7 @@ a {
     display: block;
 }
 
-/* Khi ít ảnh: hiển thị nguyên vẹn ảnh, không crop */
+
 .detail-gallery.few-images .gallery-big img {
     width: 100%;
     height: auto;
@@ -1493,8 +1482,6 @@ a {
     justify-content: center;
 }
 
-
-/*Sửa layout phần dưới của ảnh banner chi tietks, để k bị đè*/
 .detail-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 330px;
@@ -1809,7 +1796,7 @@ a {
         align-items: flex-start;
     }
 }
-/* Cho phần ảnh của loại phòng trang chi tietks á */
+
 .room-slider {
     position: relative;
     overflow: hidden;
@@ -1866,7 +1853,7 @@ a {
     z-index: 5;
 }
 
-/*  modal tất cả ảnh ks+lp trong tranhg chitietks */
+
 .hotel-photo-viewer {
     position: fixed;
     inset: 0;
@@ -2281,7 +2268,7 @@ a {
     }
 }
 
-/* ===== TRANG CHỈNH SỬA LOẠI PHÒNG =====*/
+
 .edit-room-page {
     background: #f4f6f9;
     padding: 34px 0 70px;
@@ -2514,7 +2501,7 @@ a {
         grid-template-columns: 1fr;
     }
 }
-/* ===== THÊM VÀO CUỐI FILE CSS CỦA PARTNER ===== */
+
 
 /* ===== FORM AUTH ===== */
 .auth-section {
@@ -2736,7 +2723,7 @@ a {
     background: #fee2e2;
     color: #991b1b;
 }
-/*Trang đặt phfong*/
+
 .booking-page {
     background: #f4f6f9;
     padding: 36px 0 70px;
@@ -2744,10 +2731,12 @@ a {
 
 .booking-gallery {
     display: grid;
-    grid-template-columns: 2fr 1.4fr;
-    gap: 12px;
-    height: 340px;
-    margin-bottom: 28px;
+    grid-template-columns: 1.45fr 1fr;
+    gap: 14px;
+    height: 430px;
+    margin-bottom: 30px;
+    position: relative;
+    clear: both;
 }
 
 .booking-gallery-main,
@@ -2772,13 +2761,20 @@ a {
 
 .booking-layout {
     display: grid;
-    grid-template-columns: 1fr 340px;
+    grid-template-columns: 1fr 330px;
     gap: 28px;
+    margin-top: 0;
     align-items: start;
+    position: relative;
+    clear: both;
 }
 
 .booking-hotel-title {
-    margin-bottom: 18px;
+    width: 100%;
+    clear: both;
+    margin-bottom: 24px;
+    display: block;
+    position: relative;
 }
 
 .booking-hotel-title h1 {
@@ -2959,7 +2955,7 @@ a {
    font-size: 22px;
    color: #111;
 }
-/* Ghi chú */
+
 .service-fee-note {
    font-size: 13px;
    color: #888;
@@ -2989,12 +2985,24 @@ a {
 @media (max-width: 992px) {
     .booking-gallery,
     .booking-layout {
-        grid-template-columns: 1fr;
-    }
+    display: grid;
+    grid-template-columns: 1fr 330px;
+    gap: 28px;
+    margin-top: 0;
+    align-items: start;
+    position: relative;
+    clear: both;
+}
 
     .booking-gallery {
-        height: auto;
-    }
+    display: grid;
+    grid-template-columns: 1.45fr 1fr;
+    gap: 14px;
+    height: 430px;
+    margin-bottom: 30px;
+    position: relative;
+    clear: both;
+}
 
     .booking-gallery-main {
         height: 260px;
@@ -3014,7 +3022,7 @@ a {
     }
 }
 
-/* của phần ảnh loạiphong trong datphogn */
+
 .booking-room-gallery-wrapper {
     margin-top: 22px;
 }
@@ -3077,7 +3085,7 @@ a {
     font-weight: 800;
 }
 
-/* ===== THANH TOÁN MOMO ===== */
+
 .momo-payment-page {
    background: #f4f6f9;
    padding: 42px 0 80px;
@@ -3415,13 +3423,13 @@ a {
    margin-bottom: 4px;
 }
 .countdown-timer {
-   font-size: 32px;       /* TO hơn */
+   font-size: 32px;
    font-weight: 700;
-   color: #e53935;        /* đỏ cảnh báo */
+   color: #e53935;
    letter-spacing: 2px;
 }
 
-/* Cho tab khung ở dưới của trang ql loại phòng*/
+
 .stat-link {
     text-decoration: none;
     color: inherit;
@@ -3500,7 +3508,7 @@ a {
     color: #991b1b;
 }
 
-/*=== Cho trang chi tiết đơn đặt phòng trong qly loai phong ===*/
+
 .booking-detail-owner-page {
     background: #f4f6f9;
     padding: 36px 0 70px;
@@ -3572,7 +3580,7 @@ a {
     }
 }
 
-/*Phong dang o cua qly loaiphong*/
+
 .room-orders-row {
     display: none;
 }
@@ -3597,7 +3605,7 @@ a {
     padding: 10px;
     border-bottom: 1px solid #eee;
 }
-/*Nút xóa lp của qly loại phòng*/
+
 
 .room-delete-disabled {
     position: relative;
@@ -3606,7 +3614,6 @@ a {
     opacity: 0.6;
 }
 
-/* Tooltip  nút xóa lp*/
 .room-delete-disabled::after {
     content: attr(data-tooltip);
     position: absolute;
@@ -3642,13 +3649,11 @@ a {
     transition: 0.2s ease;
 }
 
-/* hover hiện tooltip nút xóa lp */
 .room-delete-disabled:hover::after,
 .room-delete-disabled:hover::before {
     opacity: 1;
 }
 
-/*====== nút hủy đơn ở trang chi tiết đơn =====*/
 .booking-owner-actions {
     margin: 18px 0 24px;
     display: flex;
@@ -3679,7 +3684,6 @@ a {
     cursor: not-allowed;
 }
 
-/* ô thu nhập của trang ql lp*/
 .income-block {
     padding: 22px;
     border-bottom: 1px solid #eef2f7;
@@ -3695,7 +3699,6 @@ a {
     margin-bottom: 16px;
 }
 
-/* của thanh tìm kiếm và bộ lọc của ô tất cả các đơn trong trang ql lp*/
 .booking-manage-toolbar {
     display: flex;
     gap: 18px;
@@ -3715,15 +3718,11 @@ a {
     font-family: 'Montserrat', sans-serif;
 }
 
-
-
-/*trang thêm lp*/
 .required {
     color: #dc2626;
     font-weight: 800;
 }
 
-/* Bảng chueyern tiền ks */
 .payout-table-card {
     margin-top: 24px;
     overflow: hidden;
@@ -3748,7 +3747,7 @@ a {
     letter-spacing: 0.3px;
 }
 
-/* Phần đánh giá */
+
 .hotel-review-section {
     margin-top: 28px;
 }
@@ -3913,4 +3912,13 @@ a {
     .review-form-grid {
         grid-template-columns: 1fr;
     }
+}
+.booking-form{
+    background: white;
+}
+.booking-gallery img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }

@@ -197,7 +197,7 @@
                                 {% endif %}
 
                                 <a href="{{ url_for(
-                                   'khoi_tao_dat_phong',
+                                   'dat_phong',
                                     hotel_id=data.hotel.MaKhachSan,
                                     room_id=item.room.MaLoaiPhong,
                                     checkin=data.checkin,
@@ -235,7 +235,7 @@
 
                 {% if data.reviews %}
                     <div class="review-average">
-                        <strong>{{ "%.1f"|format(data.hotel.DiemDanhGiaTrungBinh or 0) }}</strong>
+                        <strong>{{ "%.2f"|format(data.hotel.DiemDanhGiaTrungBinh or 0) }}</strong>
                         <span>/ 5.0</span>
                     </div>
                 {% endif %}

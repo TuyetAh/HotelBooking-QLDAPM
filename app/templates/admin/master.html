@@ -1,0 +1,129 @@
+{% extends 'admin/base.html' %}
+
+{% block head_css %}
+{{ super() }}
+<style>
+
+/* =========================
+   CHỈ ÁP DỤNG TRONG ADMIN
+========================= */
+.custom-admin {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f0f2f5;
+}
+
+/* NAVBAR */
+.custom-admin .navbar {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;
+    border: none !important;
+    box-shadow: 0 2px 12px rgba(37,99,235,0.3) !important;
+    padding: 0 24px !important;
+    min-height: 60px !important;
+}
+/* override bootstrap 5 */
+.bg-dark {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb) !important;
+}
+
+/* chữ trắng rõ hơn */
+.navbar-dark .navbar-brand,
+.navbar-dark .navbar-nav .nav-link {
+    color: #fff !important;
+}
+.custom-admin .navbar .navbar-brand {
+    color: #fff !important;
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    line-height: 60px !important;
+}
+
+.custom-admin .navbar .navbar-nav > li > a {
+    color: rgba(255,255,255,0.85) !important;
+    line-height: 60px !important;
+}
+
+/* SIDEBAR */
+.custom-admin .nav-sidebar {
+    background: #fff;
+    border-right: 1px solid #e5e7eb;
+    min-height: calc(100vh - 60px);
+    padding: 16px 8px;
+    width: 220px;
+}
+
+/* CONTENT */
+.custom-admin .container-fluid > .row > .col-md-9 {
+    padding: 24px;
+}
+
+/* TABLE */
+.custom-admin .table {
+    font-size: 13px;
+}
+
+.custom-admin .table > thead > tr > th {
+    background: #f9fafb;
+    color: #6b7280;
+    font-size: 12px;
+}
+
+/* BUTTON */
+.custom-admin .btn-primary {
+    background: #2563eb;
+    color: #fff;
+}
+
+/* FORM (CHỈ STYLE, KHÔNG PHÁ LAYOUT) */
+.custom-admin .form-control {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 8px 12px;
+}
+
+/* LABEL */
+.custom-admin .label {
+    border-radius: 20px;
+    padding: 4px 10px;
+}
+
+/* ALERT */
+.custom-admin .alert {
+    border-radius: 10px;
+    padding: 12px 16px;
+}
+.navbar {
+    margin-bottom: 0 !important;
+}
+
+</style>
+{% endblock %}
+
+
+{% block body %}
+<body class="custom-admin">
+    {{ super() }}
+</body>
+{% endblock %}
+
+
+{% block tail %}
+{{ super() }}
+
+{% if session.get('admin_logged_in') %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var navbar = document.querySelector('.navbar');
+    if (!navbar) return;
+
+    var div = document.createElement('div');
+    div.style.cssText = "float:right;display:flex;align-items:center;gap:10px;color:white;padding:0 10px;";
+    div.innerHTML = `
+        👤 <strong>{{ session.get('admin_ho_ten', session.get('admin_username', 'Admin')) }}</strong>
+        <a href="/admin/logout" style="color:white;margin-left:10px;">Đăng xuất</a>
+    `;
+    navbar.appendChild(div);
+});
+</script>
+{% endif %}
+
+{% endblock %}

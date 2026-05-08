@@ -733,7 +733,7 @@ document.addEventListener("DOMContentLoaded", function () {
    if (!countdownEl) return;
 
 
-   let totalSeconds = 3 * 60;
+   let totalSeconds = 30;
    const bookingId = countdownEl.dataset.bookingId;
 
 
@@ -758,30 +758,39 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 document.addEventListener("DOMContentLoaded", function () {
-   const countdownEl = document.getElementById("momoCountdown");
-   if (!countdownEl) return;
+  const countdownEl = document.getElementById("momoCountdown");
+  if (!countdownEl) return;
 
 
-   let totalSeconds = 5 * 60;
-   const bookingId = countdownEl.dataset.bookingId;
 
 
-   const timer = setInterval(function () {
-       const minutes = Math.floor(totalSeconds / 60);
-       const seconds = totalSeconds % 60;
+  let totalSeconds = 1 * 60;
+  const bookingId = countdownEl.dataset.bookingId;
 
 
-       countdownEl.textContent =
-           String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
 
 
-       if (totalSeconds <= 0) {
-           clearInterval(timer);
-           window.location.href = `/dat-phong/${bookingId}/het-han`;
-       }
+  const timer = setInterval(function () {
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
 
 
-       totalSeconds--;
-   }, 1000);
+
+
+      countdownEl.textContent =
+          String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+
+
+
+
+      if (totalSeconds <= 0) {
+          clearInterval(timer);
+          window.location.href = `/dat-phong/${bookingId}/het-han`;
+      }
+
+
+
+
+      totalSeconds--;
+  }, 1000);
 });
-

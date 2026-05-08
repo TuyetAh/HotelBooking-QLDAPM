@@ -1,54 +1,24 @@
 {% extends 'layout/base.html' %}
-
-{% block title %}Đăng ký{% endblock %}
-
+{% block title %}Quên mật khẩu{% endblock %}
 {% block content %}
 <section class="auth-section">
     <div class="container">
         <div class="auth-box">
 
-            {% if step == "form" %}
-                <h2>Đăng ký tài khoản</h2>
+            {% if step == "email" %}
+                <h2>Quên mật khẩu</h2>
+                <p style="color:#6b7280; font-size:14px; margin-bottom:20px;">
+                    Nhập email đã đăng ký để nhận mã xác nhận.
+                </p>
 
                 {% if err_msg %}
                     <div class="form-message error">{{ err_msg }}</div>
                 {% endif %}
 
-                <form method="POST" action="{{ url_for('dang_ky_gui_otp') }}">
-                    <div class="form-group">
-                        <label>Họ tên</label>
-                        <input type="text" name="fullname"
-                               value="{{ form_data.fullname if form_data else '' }}"
-                               placeholder="Nhập họ tên đầy đủ" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Tên đăng nhập</label>
-                        <input type="text" name="username"
-                               value="{{ form_data.username if form_data else '' }}"
-                               placeholder="Tên đăng nhập" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Mật khẩu</label>
-                        <input type="password" name="password"
-                               placeholder="Tối thiểu 6 ký tự" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Số điện thoại</label>
-                        <input type="text" name="phone"
-                               value="{{ form_data.phone if form_data else '' }}"
-                               placeholder="Số điện thoại" required>
-                    </div>
+                <form method="POST" action="{{ url_for('quen_mat_khau') }}">
                     <div class="form-group">
                         <label>Email</label>
-                        <input type="email" name="email"
-                               value="{{ form_data.email if form_data else '' }}"
-                               placeholder="Email để nhận mã xác nhận" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Số tài khoản ngân hàng <span style="color:#9ca3af;">(tuỳ chọn)</span></label>
-                        <input type="text" name="bank_account"
-                               value="{{ form_data.bank_account if form_data else '' }}"
-                               placeholder="Số tài khoản ngân hàng">
+                        <input type="email" name="email" placeholder="Nhập email đã đăng ký" required>
                     </div>
                     <button type="submit" class="btn-primary">Gửi mã xác nhận</button>
                 </form>
@@ -81,7 +51,7 @@
     <div class="form-message error">{{ err_msg }}</div>
 {% endif %}
 
-<form method="POST" action="{{ url_for('dang_ky_xac_nhan_otp') }}">
+<form method="POST" action="{{ url_for('xac_nhan_otp_mat_khau') }}">
 
     <label style="font-size:13px; color:#6b7280; display:block; margin-bottom:8px;">
         Nhập mã 6 chữ số
@@ -104,14 +74,14 @@
     </p>
 
     <button type="submit" class="btn-primary">
-        Xác nhận & Tạo tài khoản
+        Xác nhận
     </button>
 
     <div style="display:flex; justify-content:space-between; margin-top:1rem;">
-        <a href="{{ url_for('dang_ky') }}" style="font-size:13px; color:#6b7280; text-decoration:none;">
+        <a href="{{ url_for('dang_nhap') }}" style="font-size:13px; color:#6b7280; text-decoration:none;">
             ← Quay lại
         </a>
-        <a href="{{ url_for('dang_ky') }}" style="font-size:13px; color:#2563eb; text-decoration:none;">
+        <a href="{{ url_for('quen_mat_khau') }}" style="font-size:13px; color:#2563eb; text-decoration:none;">
             Gửi lại mã
         </a>
     </div>
@@ -138,12 +108,27 @@ document.querySelector('form').addEventListener('submit', () => {
         [...boxes].map(b => b.value).join('');
 });
 </script>
-            {% endif %}
 
-            <p class="auth-note">
-                Đã có tài khoản?
-                <a href="{{ url_for('dang_nhap') }}">Đăng nhập</a>
-            </p>
+            {% elif step == "new_password" %}
+                <h2>Đặt mật khẩu mới</h2>
+                {% if err_msg %}
+                    <div class="form-message error">{{ err_msg }}</div>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('dat_lai_mat_khau_route') }}">
+                    <div class="form-group">
+                        <label>Mật khẩu mới</label>
+                        <input type="password" name="mat_khau_moi"
+                               placeholder="Tối thiểu 6 ký tự" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Xác nhận mật khẩu mới</label>
+                        <input type="password" name="xac_nhan_mat_khau"
+                               placeholder="Nhập lại mật khẩu mới" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Đặt lại mật khẩu</button>
+                </form>
+            {% endif %}
 
         </div>
     </div>

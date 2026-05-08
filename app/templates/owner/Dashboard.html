@@ -84,6 +84,12 @@
                 </thead>
                 <tbody>
                     {% for hotel in hotels %}
+                    {# Thu thập danh sách ảnh để truyền vào JS qua data attribute #}
+                    {% set hotel_images = [] %}
+                    {% if hotel.ThuMucAnh %}
+                        {# Jinja sẽ render list ảnh từ hàm lay_danh_sach_anh nếu bạn expose qua context_processor #}
+                        {# Hoặc đơn giản truyền ThuMucAnh và để JS fetch — ở đây ta dùng data-folder #}
+                    {% endif %}
                     <tr style="border-top:1px solid #f3f4f6;">
                         <td style="padding:14px 16px; font-weight:600;">{{ hotel.TenKhachSan }}</td>
                         <td style="padding:14px 16px; color:#6b7280;">{{ hotel.ThanhPho }}</td>
@@ -106,23 +112,23 @@
                         <td style="padding:14px 16px; color:#6b7280; font-size:13px;">
                             {{ hotel.NgayTao.strftime('%d/%m/%Y') }}
                         </td>
-
-                        <!-- SỬA: thêm nút Sửa kế bên nút Quản lý -->
                         <td style="padding:14px 16px;">
                             <div style="display:flex; gap:12px; align-items:center;">
                                 <a href="{{ url_for('quan_ly_loai_phong', hotel_id=hotel.MaKhachSan) }}"
                                    style="color:#0d6efd; font-size:13px; font-weight:600;">
                                    Quản lý
                                 </a>
+                                {# Nút Sửa — dùng data-* để truyền dữ liệu sạch, tránh lỗi JS với ký tự đặc biệt #}
                                 <button
-                                    onclick="openEditModal(
-                                        {{ hotel.MaKhachSan }},
-                                        '{{ hotel.TenKhachSan | replace("'", "\\'") }}',
-                                        '{{ hotel.ThanhPho | replace("'", "\\'") }}',
-                                        '{{ hotel.DiaChi | replace("'", "\\'") }}',
-                                        {{ hotel.TrangThaiDuyet }}
-                                    )"
-                                    style="background:none; border:none; color:#f59e0b; font-size:13px; font-weight:600; cursor:pointer; padding:0;">
+                                    class="btn-open-edit"
+                                    data-hotel-id="{{ hotel.MaKhachSan }}"
+                                    data-ten="{{ hotel.TenKhachSan }}"
+                                    data-thanh-pho="{{ hotel.ThanhPho }}"
+                                    data-dia-chi="{{ hotel.DiaChi }}"
+                                    data-trang-thai-duyet="{{ hotel.TrangThaiDuyet }}"
+                                    data-thu-muc-anh="{{ hotel.ThuMucAnh or '' }}"
+                                    style="background:none; border:none; color:#f59e0b; font-size:13px;
+                                           font-weight:600; cursor:pointer; padding:0;">
                                     ✏️ Sửa
                                 </button>
                             </div>
@@ -148,83 +154,378 @@
     </div>
 </section>
 
-<!-- THÊM: MODAL CHỈNH SỬA KHÁCH SẠN -->
-<div id="editModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4);
-     z-index:9999; align-items:center; justify-content:center;">
-    <div style="background:#fff; border-radius:12px; padding:32px; width:100%;
-                max-width:480px; box-shadow:0 8px 32px rgba(0,0,0,0.15);">
+<!-- ================================================================ -->
+<!-- MODAL CHỈNH SỬA KHÁCH SẠN (CÓ 2 TAB: THÔNG TIN + ẢNH)          -->
+<!-- ================================================================ -->
+<div id="editModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);
+     z-index:9999; align-items:center; justify-content:center; padding:20px 0; overflow-y:auto;">
+    <div style="background:#fff; border-radius:12px; width:100%; max-width:560px;
+                box-shadow:0 8px 32px rgba(0,0,0,0.2); margin:auto;">
 
-        <h3 style="margin-bottom:12px; font-size:18px; color:#111827;">Chỉnh sửa khách sạn</h3>
-
-        <!-- THÊM: cảnh báo, ẩn mặc định, chỉ hiện khi KS đang được duyệt -->
-        <div id="edit_warning" style="display:none; background:#fffbeb; border:1px solid #fcd34d;
-             color:#92400e; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px;">
-            ⚠️ Khách sạn này đang <strong>hoạt động</strong>. Nếu bạn sửa tên hoặc địa chỉ,
-            khách sạn sẽ bị <strong>ẩn khỏi tìm kiếm</strong> và chuyển về
-            <strong>chờ duyệt lại</strong>.
+        <!-- TAB HEADER -->
+        <div style="display:flex; border-bottom:2px solid #f3f4f6; border-radius:12px 12px 0 0; overflow:hidden;">
+            <button onclick="switchTab('info')" id="tab_info"
+                style="flex:1; padding:14px 16px; border:none; background:#fff; font-size:14px;
+                       font-weight:600; cursor:pointer; color:#0d6efd;
+                       border-bottom:2px solid #0d6efd; transition:all .15s;">
+                📝 Thông tin
+            </button>
+            <button onclick="switchTab('images')" id="tab_images"
+                style="flex:1; padding:14px 16px; border:none; background:#fff; font-size:14px;
+                       font-weight:600; cursor:pointer; color:#6b7280;
+                       border-bottom:2px solid transparent; transition:all .15s;">
+                🖼️ Ảnh khách sạn
+            </button>
         </div>
 
-        <form id="editForm" method="POST">
-            <div style="margin-bottom:16px;">
-                <label style="display:block; font-size:13px; font-weight:600;
-                              color:#374151; margin-bottom:6px;">Tên khách sạn</label>
-                <input type="text" name="ten_khach_san" id="input_ten"
-                    style="width:100%; padding:10px 12px; border:1px solid #d1d5db;
-                           border-radius:8px; font-size:14px; box-sizing:border-box;"
-                    required>
+        <!-- ======== PANEL THÔNG TIN ======== -->
+        <div id="panel_info" style="padding:24px;">
+            <div id="edit_warning" style="display:none; background:#fffbeb; border:1px solid #fcd34d;
+                 color:#92400e; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; line-height:1.5;">
+                ⚠️ Khách sạn đang <strong>hoạt động</strong>. Nếu bạn sửa tên, thành phố hoặc địa chỉ,
+                khách sạn sẽ bị <strong>ẩn khỏi tìm kiếm</strong> và chuyển về trạng thái
+                <strong>chờ duyệt lại</strong>.
             </div>
-            <div style="margin-bottom:16px;">
-                <label style="display:block; font-size:13px; font-weight:600;
-                              color:#374151; margin-bottom:6px;">Thành phố</label>
-                <input type="text" name="thanh_pho" id="input_thanh_pho"
-                    style="width:100%; padding:10px 12px; border:1px solid #d1d5db;
-                           border-radius:8px; font-size:14px; box-sizing:border-box;"
-                    required>
+            <form id="editForm" method="POST">
+                <div style="margin-bottom:14px;">
+                    <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">
+                        Tên khách sạn <span style="color:#dc2626;">*</span>
+                    </label>
+                    <input type="text" name="ten_khach_san" id="input_ten"
+                        style="width:100%; padding:10px 12px; border:1px solid #d1d5db;
+                               border-radius:8px; font-size:14px; box-sizing:border-box;" required>
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">
+                        Thành phố <span style="color:#dc2626;">*</span>
+                    </label>
+                    <input type="text" name="thanh_pho" id="input_thanh_pho"
+                        style="width:100%; padding:10px 12px; border:1px solid #d1d5db;
+                               border-radius:8px; font-size:14px; box-sizing:border-box;" required>
+                </div>
+                <div style="margin-bottom:22px;">
+                    <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">
+                        Địa chỉ <span style="color:#dc2626;">*</span>
+                    </label>
+                    <input type="text" name="dia_chi" id="input_dia_chi"
+                        style="width:100%; padding:10px 12px; border:1px solid #d1d5db;
+                               border-radius:8px; font-size:14px; box-sizing:border-box;" required>
+                </div>
+                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button type="button" onclick="closeEditModal()"
+                        style="padding:10px 20px; border:1px solid #d1d5db; border-radius:8px;
+                               background:#fff; font-size:14px; cursor:pointer; color:#374151;">
+                        Hủy
+                    </button>
+                    <button type="submit"
+                        style="padding:10px 20px; background:#0d6efd; color:#fff; border:none;
+                               border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;">
+                        Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ======== PANEL ẢNH ======== -->
+        <div id="panel_images" style="display:none; padding:24px;">
+
+            <!-- Ảnh hiện có -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <p style="font-size:13px; font-weight:600; color:#374151; margin:0;">
+                    Ảnh hiện có <span id="img_count_badge"
+                        style="background:#e0e7ff; color:#3730a3; border-radius:20px;
+                               padding:2px 8px; font-size:12px; margin-left:4px;">0</span>
+                </p>
             </div>
-            <div style="margin-bottom:24px;">
-                <label style="display:block; font-size:13px; font-weight:600;
-                              color:#374151; margin-bottom:6px;">Địa chỉ</label>
-                <input type="text" name="dia_chi" id="input_dia_chi"
-                    style="width:100%; padding:10px 12px; border:1px solid #d1d5db;
-                           border-radius:8px; font-size:14px; box-sizing:border-box;"
-                    required>
+
+            <div id="current_images_grid"
+                style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+                       margin-bottom:20px; min-height:80px;">
+                <p id="no_images_msg"
+                   style="color:#9ca3af; font-size:13px; grid-column:1/-1;
+                          text-align:center; padding:24px 0; margin:0;">
+                    Khách sạn chưa có ảnh nào
+                </p>
             </div>
-            <div style="display:flex; gap:12px; justify-content:flex-end;">
-                <button type="button" onclick="closeEditModal()"
-                    style="padding:10px 20px; border:1px solid #d1d5db; border-radius:8px;
-                           background:#fff; font-size:14px; cursor:pointer; color:#374151;">
-                    Hủy
-                </button>
-                <button type="submit"
-                    style="padding:10px 20px; background:#0d6efd; color:#fff; border:none;
-                           border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;">
-                    Lưu thay đổi
-                </button>
-            </div>
-        </form>
+
+            <hr style="border:none; border-top:1px solid #f3f4f6; margin:0 0 18px 0;">
+
+            <!-- Upload ảnh mới -->
+            <p style="font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">
+                Thêm ảnh mới
+            </p>
+            <form id="uploadImageForm" method="POST" enctype="multipart/form-data">
+                <label style="display:block; border:2px dashed #d1d5db; border-radius:8px;
+                              padding:16px; text-align:center; cursor:pointer;
+                              background:#fafafa; margin-bottom:12px; transition:border-color .15s;"
+                       onmouseover="this.style.borderColor='#0d6efd'"
+                       onmouseout="this.style.borderColor='#d1d5db'">
+                    <span style="font-size:24px; display:block; margin-bottom:4px;">📁</span>
+                    <span style="font-size:13px; color:#6b7280;">Nhấn để chọn ảnh</span>
+                    <span style="display:block; font-size:11px; color:#9ca3af; margin-top:2px;">
+                        JPG, PNG, WEBP — nhiều ảnh một lúc
+                    </span>
+                    <input type="file" name="hotel_images" multiple accept="image/*"
+                           id="fileInput"
+                           style="display:none;"
+                           onchange="previewSelectedFiles(this)">
+                </label>
+
+                <!-- Preview ảnh sẽ upload -->
+                <div id="upload_preview" style="display:none; margin-bottom:12px;">
+                    <p style="font-size:12px; color:#6b7280; margin-bottom:6px;">
+                        Ảnh đã chọn (<span id="preview_count">0</span>):
+                    </p>
+                    <div id="preview_grid"
+                         style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px;">
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button type="button" onclick="closeEditModal()"
+                        style="padding:9px 18px; border:1px solid #d1d5db; border-radius:8px;
+                               background:#fff; font-size:13px; cursor:pointer; color:#374151;">
+                        Đóng
+                    </button>
+                    <button type="submit" id="btnUpload"
+                        style="padding:9px 18px; background:#16a34a; color:#fff; border:none;
+                               border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;">
+                        ➕ Tải ảnh lên
+                    </button>
+                </div>
+            </form>
+        </div><!-- end panel_images -->
+
     </div>
 </div>
 
-<!-- THÊM: SCRIPT XỬ LÝ MODAL -->
+<!-- Form ẩn để xóa ảnh (submit bình thường) -->
+<form id="deleteImageForm" method="POST" style="display:none;">
+    <input type="hidden" name="filename" id="deleteFilename">
+</form>
+
+
 <script>
-function openEditModal(hotelId, tenKhachSan, thanhPho, diaChi, trangThaiDuyet) {
-    document.getElementById('input_ten').value = tenKhachSan;
-    document.getElementById('input_thanh_pho').value = thanhPho;
-    document.getElementById('input_dia_chi').value = diaChi;
-    document.getElementById('editForm').action = '/quan-ly/khach-san/' + hotelId + '/chinh-sua';
-
-    // Chỉ hiện cảnh báo nếu khách sạn đang ở trạng thái đã duyệt
-    const warning = document.getElementById('edit_warning');
-    warning.style.display = (trangThaiDuyet === 1) ? 'block' : 'none';
-
-    document.getElementById('editModal').style.display = 'flex';
+// ----------------------------------------------------------------
+// Tab switching
+// ----------------------------------------------------------------
+function switchTab(tab) {
+    ['info', 'images'].forEach(function(t) {
+        var active = (t === tab);
+        document.getElementById('panel_' + t).style.display = active ? 'block' : 'none';
+        document.getElementById('tab_' + t).style.color = active ? '#0d6efd' : '#6b7280';
+        document.getElementById('tab_' + t).style.borderBottom = active
+            ? '2px solid #0d6efd' : '2px solid transparent';
+    });
 }
 
+// ----------------------------------------------------------------
+// Biến lưu hotel_id đang mở modal
+// ----------------------------------------------------------------
+var _currentHotelId = null;
+
+// ----------------------------------------------------------------
+// Mở modal
+// ----------------------------------------------------------------
+document.querySelectorAll('.btn-open-edit').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var hotelId   = this.dataset.hotelId;
+        var ten       = this.dataset.ten;
+        var thanhPho  = this.dataset.thanhPho;
+        var diaChi    = this.dataset.diaChi;
+        var trangThai = parseInt(this.dataset.trangThaiDuyet, 10);
+
+        _currentHotelId = hotelId;
+
+        // --- Panel thông tin ---
+        document.getElementById('input_ten').value       = ten;
+        document.getElementById('input_thanh_pho').value = thanhPho;
+        document.getElementById('input_dia_chi').value   = diaChi;
+        document.getElementById('editForm').action
+            = '/quan-ly/khach-san/' + hotelId + '/chinh-sua';
+
+        var warning = document.getElementById('edit_warning');
+        warning.style.display = (trangThai === 1) ? 'block' : 'none';
+
+        // --- Panel ảnh ---
+        document.getElementById('uploadImageForm').action
+            = '/quan-ly/khach-san/' + hotelId + '/them-anh';
+        document.getElementById('deleteImageForm').action
+            = '/quan-ly/khach-san/' + hotelId + '/xoa-anh';
+
+        // Reset preview
+        resetUploadPreview();
+
+        // Load ảnh hiện có qua AJAX (luôn fetch, không cần kiểm tra thuMucAnh)
+        loadHotelImages(hotelId);
+
+        switchTab('info');
+        document.getElementById('editModal').style.display = 'flex';
+    });
+});
+
+// ----------------------------------------------------------------
+// Load ảnh từ server (AJAX) — luôn gọi fetch dù KS chưa có ảnh
+// ----------------------------------------------------------------
+function loadHotelImages(hotelId) {
+    var grid  = document.getElementById('current_images_grid');
+    var noMsg = document.getElementById('no_images_msg');
+    var badge = document.getElementById('img_count_badge');
+
+    // Xóa ảnh cũ đã render (giữ lại no_images_msg)
+    Array.from(grid.children).forEach(function(child) {
+        if (child.id !== 'no_images_msg') child.remove();
+    });
+    noMsg.style.display = 'block';
+    badge.textContent = '0';
+
+    fetch('/quan-ly/khach-san/' + hotelId + '/danh-sach-anh')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            renderImages(data.images || [], grid, noMsg, badge);
+        })
+        .catch(function(err) {
+            console.error('Lỗi load ảnh:', err);
+        });
+}
+
+// ----------------------------------------------------------------
+// Render grid ảnh
+// ----------------------------------------------------------------
+function renderImages(images, grid, noMsg, badge) {
+    badge.textContent = images.length;
+
+    if (!images.length) {
+        noMsg.style.display = 'block';
+        return;
+    }
+    noMsg.style.display = 'none';
+
+    images.forEach(function(item) {
+        var div = document.createElement('div');
+        div.style.cssText = 'position:relative; border-radius:8px; overflow:hidden; aspect-ratio:1; background:#f3f4f6;';
+        div.innerHTML =
+            '<img src="/static/' + item.path + '" '
+            + 'style="width:100%; height:100%; object-fit:cover;">'
+            + '<button onclick="xoaAnh(\'' + escapeJs(item.filename) + '\')" '
+            + 'style="position:absolute; top:4px; right:4px; background:rgba(220,38,38,0.85); '
+            + 'color:#fff; border:none; border-radius:50%; width:22px; height:22px; '
+            + 'font-size:13px; cursor:pointer; line-height:1; padding:0;" title="Xóa ảnh">✕</button>'
+            + '<div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.4); '
+            + 'padding:3px 6px; font-size:10px; color:#fff; overflow:hidden; text-overflow:ellipsis; '
+            + 'white-space:nowrap;">' + escapeHtml(item.filename) + '</div>';
+        grid.insertBefore(div, document.getElementById('no_images_msg'));
+    });
+}
+
+function escapeJs(str) {
+    return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+function escapeHtml(str) {
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(str));
+    return d.innerHTML;
+}
+
+// ----------------------------------------------------------------
+// Xóa ảnh — submit form ẩn bình thường
+// ----------------------------------------------------------------
+function xoaAnh(filename) {
+    if (!confirm('Xóa ảnh "' + filename + '"?\nHành động này không thể hoàn tác.')) return;
+    document.getElementById('deleteFilename').value = filename;
+    document.getElementById('deleteImageForm').submit();
+}
+
+// ----------------------------------------------------------------
+// Upload ảnh qua AJAX (giữ modal mở, reload grid sau khi upload)
+// ----------------------------------------------------------------
+document.getElementById('uploadImageForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    var formData = new FormData(this);
+    var action   = this.action;
+    var hotelId  = _currentHotelId;
+    var btnUpload = document.getElementById('btnUpload');
+
+    if (!formData.get('hotel_images') || !formData.get('hotel_images').name) {
+        alert('Vui lòng chọn ít nhất một ảnh.');
+        return;
+    }
+
+    btnUpload.disabled = true;
+    btnUpload.textContent = 'Đang tải...';
+
+    fetch(action, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btnUpload.disabled = false;
+        btnUpload.textContent = '➕ Tải ảnh lên';
+
+        if (data.success) {
+            resetUploadPreview();
+            loadHotelImages(hotelId);
+        } else {
+            alert(data.message || 'Có lỗi xảy ra khi tải ảnh.');
+        }
+    })
+    .catch(function(err) {
+        btnUpload.disabled = false;
+        btnUpload.textContent = '➕ Tải ảnh lên';
+        console.error('Upload error:', err);
+        alert('Có lỗi xảy ra khi tải ảnh.');
+    });
+});
+
+// ----------------------------------------------------------------
+// Preview ảnh sẽ upload
+// ----------------------------------------------------------------
+function previewSelectedFiles(input) {
+    var previewSection = document.getElementById('upload_preview');
+    var previewGrid    = document.getElementById('preview_grid');
+    var countSpan      = document.getElementById('preview_count');
+    previewGrid.innerHTML = '';
+
+    if (!input.files || !input.files.length) {
+        previewSection.style.display = 'none';
+        return;
+    }
+
+    previewSection.style.display = 'block';
+    countSpan.textContent = input.files.length;
+
+    Array.from(input.files).forEach(function(file) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var img = document.createElement('img');
+            img.src = e.target.result;
+            img.style.cssText = 'width:100%; aspect-ratio:1; object-fit:cover; border-radius:6px;';
+            previewGrid.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function resetUploadPreview() {
+    document.getElementById('upload_preview').style.display = 'none';
+    document.getElementById('preview_grid').innerHTML = '';
+    document.getElementById('preview_count').textContent = '0';
+    var fi = document.getElementById('fileInput');
+    if (fi) fi.value = '';
+}
+
+// ----------------------------------------------------------------
+// Đóng modal
+// ----------------------------------------------------------------
 function closeEditModal() {
     document.getElementById('editModal').style.display = 'none';
+    resetUploadPreview();
+    _currentHotelId = null;
 }
 
-// Click ra ngoài modal thì đóng
 document.getElementById('editModal').addEventListener('click', function(e) {
     if (e.target === this) closeEditModal();
 });

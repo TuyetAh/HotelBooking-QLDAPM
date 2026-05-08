@@ -7,6 +7,8 @@ import shutil
 from datetime import datetime
 from decimal import Decimal
 import math
+import random
+import string
 
 from sqlalchemy import or_
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -806,15 +808,65 @@ def get_review_count_by_hotel(hotel_id):
 # 9. ĐẶT PHÒNG
 # =========================================================
 
+def _generate_booking_code():
+   today = datetime.now().strftime("%Y%m%d")
+   suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+   return f"DP{today}{suffix}"
+
+def create_booking(user_id, hotel_id, room_id, checkin, checkout, so_nguoi_lon, so_phong, tong_tien):
+   try:
+       checkin_date  = datetime.strptime(checkin, "%Y-%m-%d").date()
+       checkout_date = datetime.strptime(checkout, "%Y-%m-%d").date()
+       so_dem        = (checkout_date - checkin_date).days
+
+       room = get_room_type_by_id(room_id)
+       if not room:
+           return False, "Không tìm thấy loại phòng."
+
+       code = _generate_booking_code()
+       while DatPhong.query.filter_by(MaDatPhongCode=code).first():
+           code = _generate_booking_code()
+
+       booking = DatPhong(
+           MaDatPhongCode=code,
+           MaNguoiDung=user_id,
+           MaKhachSan=hotel_id,
+           NgayNhanPhong=checkin_date,
+           NgayTraPhong=checkout_date,
+           SoNguoiLuuTru=int(so_nguoi_lon),
+           TongTien=tong_tien,
+           TrangThaiDatPhong=0
+       )
+       db.session.add(booking)
+       db.session.flush()
+
+
+       detail = ChiTietDatPhong(
+           MaDatPhong=booking.MaDatPhong,
+           MaLoaiPhong=room_id,
+           SoLuongPhongDat=int(so_phong),
+           DonGiaMoiDem=room.GiaMoiDem,
+           SoDem=so_dem,
+           ThanhTien=room.GiaMoiDem * so_dem * int(so_phong)
+       )
+       db.session.add(detail)
+       db.session.commit()
+       return True, booking
+
+   except Exception as e:
+       db.session.rollback()
+       return False, str(e)
+
+def get_booking_by_code(booking_code):
+   return DatPhong.query.filter_by(MaDatPhongCode=booking_code).first()
+
 def get_booking_by_id(booking_id):
     return DatPhong.query.get(booking_id)
-
 
 def get_bookings_by_user(user_id):
     return DatPhong.query.filter_by(MaNguoiDung=user_id).order_by(
         DatPhong.NgayTao.desc()
     ).all()
-
 
 # =========================================================
 # 10. THANH TOÁN
@@ -1169,7 +1221,7 @@ def get_featured_hotels(limit=None):
     query = KhachSan.query.filter(
         KhachSan.TrangThaiDuyet == 1,
         KhachSan.TrangThaiHoatDong == 1,
-        KhachSan.DiemDanhGiaTrungBinh > 8.5
+        KhachSan.DiemDanhGiaTrungBinh > 4.0
     ).order_by(
         KhachSan.DiemDanhGiaTrungBinh.desc(),
         KhachSan.NgayTao.desc()
@@ -1243,8 +1295,8 @@ def get_hotels_by_owner(user_id):
 
 import uuid
 
-def save_hotel_images(hotel_id, files):
-    """Lưu ảnh khách sạn vào thư mục static/images/khachsan/ks_{id}"""
+def save_hotel_images(hotel_id, files, clear_existing=False):
+    """Lưu ảnh khách sạn. Nếu clear_existing=True thì xóa ảnh cũ trước."""
     if not files:
         return None
 
@@ -1255,19 +1307,26 @@ def save_hotel_images(hotel_id, files):
 
     os.makedirs(folder_path, exist_ok=True)
 
+    # Xóa ảnh cũ nếu được yêu cầu (dùng khi tạo mới để tránh tồn đọng file test)
+    if clear_existing:
+        valid_extensions = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+        for f in os.listdir(folder_path):
+            if os.path.splitext(f)[1].lower() in valid_extensions:
+                os.remove(os.path.join(folder_path, f))
+
     valid_extensions = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+    next_index = get_next_image_index(folder_path)  # dùng lại hàm đã có
     saved = 0
 
     for file in files:
         if not file or not file.filename:
             continue
-
         ext = os.path.splitext(file.filename)[1].lower()
         if ext not in valid_extensions:
             continue
-
-        filename = f"{saved + 1}{ext}"
+        filename = f"{next_index}{ext}"
         file.save(os.path.join(folder_path, filename))
+        next_index += 1
         saved += 1
 
     return folder_name if saved > 0 else None
@@ -1309,7 +1368,7 @@ def create_hotel_full(user_id, ten_khach_san, thanh_pho, dia_chi,
 
         # Lưu ảnh sau khi có hotel_id
         if files:
-            thu_muc_anh = save_hotel_images(new_hotel.MaKhachSan, files)
+            thu_muc_anh = save_hotel_images(new_hotel.MaKhachSan, files, clear_existing=True)
             if thu_muc_anh:
                 new_hotel.ThuMucAnh = thu_muc_anh
 
@@ -1476,12 +1535,12 @@ def search_hotels_advanced(
 
         # Lọc theo mức đánh giá
         if so_sao not in (None, ""):
-            so_sao_int = int(so_sao)
-            if so_sao_int == 5 and hotel.DiemDanhGiaTrungBinh < 9:
+            so_sao_float = float(so_sao)
+            if so_sao_float == 5 and hotel.DiemDanhGiaTrungBinh < 4.5:
                 continue
-            elif so_sao_int == 4 and hotel.DiemDanhGiaTrungBinh < 8:
+            elif so_sao_float == 4 and hotel.DiemDanhGiaTrungBinh < 4:
                 continue
-            elif so_sao_int == 3 and hotel.DiemDanhGiaTrungBinh < 7:
+            elif so_sao_float == 3 and hotel.DiemDanhGiaTrungBinh < 3.5:
                 continue
 
         filtered_hotels.append(hotel)
@@ -1598,6 +1657,73 @@ def get_available_room_types_by_hotel(hotel_id, checkin=None, checkout=None, so_
             })
 
     return available_rooms
+def check_room_available_before_payment(hotel_id, room_id, checkin, checkout, so_nguoi_lon, so_phong):
+   room = get_room_type_by_id(room_id)
+   hotel = get_hotel_by_id(hotel_id)
+
+
+   if not hotel:
+       return False, "Không tìm thấy khách sạn."
+
+
+   if not room:
+       return False, "Không tìm thấy loại phòng."
+
+
+   if room.MaKhachSan != hotel.MaKhachSan:
+       return False, "Loại phòng không thuộc khách sạn này."
+
+
+   if hotel.TrangThaiDuyet != 1 or hotel.TrangThaiHoatDong != 1:
+       return False, "Khách sạn hiện không khả dụng để đặt phòng."
+
+
+   if room.TrangThaiHoatDong != 1:
+       return False, "Loại phòng này hiện đã dừng hoạt động."
+
+
+   if not checkin or not checkout:
+       return False, "Vui lòng chọn ngày nhận phòng và ngày trả phòng."
+
+
+   try:
+       checkin_date = datetime.strptime(checkin, "%Y-%m-%d").date()
+       checkout_date = datetime.strptime(checkout, "%Y-%m-%d").date()
+       so_nguoi_lon = int(so_nguoi_lon)
+       so_phong = int(so_phong)
+   except Exception:
+       return False, "Thông tin đặt phòng không hợp lệ."
+
+
+   if checkout_date <= checkin_date:
+       return False, "Ngày trả phòng phải sau ngày nhận phòng."
+
+
+   if so_nguoi_lon < 1:
+       return False, "Số người lưu trú phải lớn hơn 0."
+
+
+   if so_phong < 1:
+       return False, "Số lượng phòng phải lớn hơn 0."
+
+
+   if so_nguoi_lon > room.SoNguoiToiDa:
+       return False, "Số người vượt quá sức chứa tối đa của loại phòng."
+
+
+   so_phong_con_trong = tinh_so_phong_con_trong(
+       room,
+       checkin_date,
+       checkout_date
+   )
+
+
+   if so_phong_con_trong < so_phong:
+       return False, f"Loại phòng {room.TenLoaiPhong} chỉ còn {so_phong_con_trong} phòng trống trong khoảng ngày đã chọn."
+
+
+   return True, "Phòng vẫn còn trống."
+
 def get_room_booking_data(hotel_id, room_id, checkin, checkout, so_nguoi_lon=2, so_phong=1):
     hotel = get_hotel_by_id(hotel_id)
     room = get_room_type_by_id(room_id)
@@ -1657,7 +1783,8 @@ def create_pending_booking(user_id, hotel_id, room_id, checkin, checkout, so_ngu
 
    checkin_date = datetime.strptime(checkin, "%Y-%m-%d").date()
    checkout_date = datetime.strptime(checkout, "%Y-%m-%d").date()
-
+   if not checkin or not checkout:
+       return False, "Vui lòng chọn ngày nhận phòng và ngày trả phòng."
 
    so_dem = (checkout_date - checkin_date).days
 
@@ -2283,6 +2410,27 @@ def cancel_booking_by_owner(booking_id):
         time(12, 0)
     )
 
+    payment = ThanhToan.query.filter_by(MaDatPhong=booking_id).first()
+
+    # chỉ tạo hoàn tiền nếu đơn đã thanh toán r
+    if payment and payment.TrangThaiThanhToan == 1:
+        existed_refund = HoanTien.query.filter_by(MaDatPhong=booking_id).first()
+
+        if not existed_refund:
+            refund = HoanTien(
+                MaDatPhong=booking_id,
+                SoTienHoan=booking.TongTien,
+                LyDoHoanTien="KS hủy đơn",
+                TrangThaiHoanTien=0,  # Chờ xử lý
+                ThoiGianHoanTien=None
+            )
+            db.session.add(refund)
+
+        payment.TrangThaiThanhToan = 1
+
+    elif payment:
+        payment.TrangThaiThanhToan = 2
+
     # Nếu đang trong thời gian lưu trú thì không cho hủy
     if checkin_datetime <= now < checkout_datetime:
         return False, "Không thể hủy đơn vì khách đang trong thời gian lưu trú.", hotel_id
@@ -2709,3 +2857,134 @@ def get_booking_detail_for_customer(booking_id, user_id):
         return None
 
     return booking
+
+## OTP
+import random
+import string
+from datetime import datetime, timedelta
+
+# Lưu tạm OTP trong memory (production nên dùng Redis)
+_otp_store = {}
+
+def generate_otp():
+    return ''.join(random.choices(string.digits, k=6))
+
+def luu_otp(email, otp, loai="quen_mat_khau"):
+    """Lưu OTP với thời hạn 10 phút."""
+    _otp_store[f"{loai}:{email}"] = {
+        "otp": otp,
+        "expire": datetime.now() + timedelta(minutes=10)
+    }
+
+def kiem_tra_otp(email, otp_nhap, loai="quen_mat_khau"):
+    """Kiểm tra OTP hợp lệ và chưa hết hạn."""
+    key = f"{loai}:{email}"
+    data = _otp_store.get(key)
+    if not data:
+        return False, "Mã xác nhận không tồn tại hoặc đã hết hạn"
+    if datetime.now() > data["expire"]:
+        del _otp_store[key]
+        return False, "Mã xác nhận đã hết hạn"
+    if data["otp"] != otp_nhap:
+        return False, "Mã xác nhận không đúng"
+    return True, "OK"
+
+def xoa_otp(email, loai="quen_mat_khau"):
+    key = f"{loai}:{email}"
+    if key in _otp_store:
+        del _otp_store[key]
+
+def gui_otp_quen_mat_khau(email):
+    """Gửi OTP về email để đặt lại mật khẩu."""
+    from app import mail
+    from flask_mail import Message
+
+    user = get_user_by_email(email)
+    if not user:
+        return False, "Email không tồn tại trong hệ thống"
+
+    otp = generate_otp()
+    luu_otp(email, otp, loai="quen_mat_khau")
+
+    try:
+        msg = Message(
+            subject="[Hotel Booking] Mã xác nhận đặt lại mật khẩu",
+            recipients=[email],
+            html=f"""
+            <div style="font-family:Arial,sans-serif; max-width:480px; margin:auto; padding:32px;
+                        border:1px solid #e5e7eb; border-radius:12px;">
+                <h2 style="color:#1d4ed8; margin-bottom:8px;">Đặt lại mật khẩu</h2>
+                <p style="color:#374151;">Xin chào <strong>{user.HoTen}</strong>,</p>
+                <p style="color:#374151;">Mã xác nhận của bạn là:</p>
+                <div style="background:#eff6ff; border-radius:8px; padding:20px; text-align:center;
+                            font-size:36px; font-weight:700; letter-spacing:10px; color:#1d4ed8;">
+                    {otp}
+                </div>
+                <p style="color:#6b7280; font-size:13px; margin-top:16px;">
+                    Mã có hiệu lực trong <strong>10 phút</strong>. Không chia sẻ mã này với ai.
+                </p>
+                <hr style="border:none; border-top:1px solid #e5e7eb; margin:20px 0;">
+                <p style="color:#9ca3af; font-size:12px;">Hotel Booking System</p>
+            </div>
+            """
+        )
+        mail.send(msg)
+        return True, "Đã gửi mã xác nhận"
+    except Exception as e:
+        return False, f"Lỗi gửi mail: {str(e)}"
+
+
+def gui_otp_dang_ky(email, ho_ten):
+    """Gửi OTP xác nhận đăng ký."""
+    from app import mail
+    from flask_mail import Message
+
+    otp = generate_otp()
+    luu_otp(email, otp, loai="dang_ky")
+
+    try:
+        msg = Message(
+            subject="[Hotel Booking] Mã xác nhận đăng ký tài khoản",
+            recipients=[email],
+            html=f"""
+            <div style="font-family:Arial,sans-serif; max-width:480px; margin:auto; padding:32px;
+                        border:1px solid #e5e7eb; border-radius:12px;">
+                <h2 style="color:#16a34a; margin-bottom:8px;">Xác nhận đăng ký</h2>
+                <p style="color:#374151;">Xin chào <strong>{ho_ten}</strong>,</p>
+                <p style="color:#374151;">Mã xác nhận đăng ký tài khoản của bạn là:</p>
+                <div style="background:#f0fdf4; border-radius:8px; padding:20px; text-align:center;
+                            font-size:36px; font-weight:700; letter-spacing:10px; color:#16a34a;">
+                    {otp}
+                </div>
+                <p style="color:#6b7280; font-size:13px; margin-top:16px;">
+                    Mã có hiệu lực trong <strong>10 phút</strong>.
+                </p>
+                <hr style="border:none; border-top:1px solid #e5e7eb; margin:20px 0;">
+                <p style="color:#9ca3af; font-size:12px;">Hotel Booking System</p>
+            </div>
+            """
+        )
+        mail.send(msg)
+        return True, "Đã gửi mã xác nhận"
+    except Exception as e:
+        return False, f"Lỗi gửi mail: {str(e)}"
+
+
+def dat_lai_mat_khau(email, mat_khau_moi):
+    """Đặt lại mật khẩu sau khi xác nhận OTP."""
+    from werkzeug.security import generate_password_hash
+    user = get_user_by_email(email)
+    if not user:
+        return False, "Không tìm thấy người dùng"
+
+    user.MatKhau = generate_password_hash(mat_khau_moi)
+    user.NgayCapNhat = datetime.now()
+
+    try:
+        db.session.commit()
+        return True, "Đặt lại mật khẩu thành công"
+    except Exception as e:
+        db.session.rollback()
+        return False, f"Lỗi: {str(e)}"
+
+    ## Edit Thong tin khach san

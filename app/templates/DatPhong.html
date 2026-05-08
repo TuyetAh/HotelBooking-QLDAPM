@@ -1,16 +1,14 @@
 {% extends 'layout/base.html' %}
 
-
 {% block title %}Đặt phòng{% endblock %}
-
 
 {% block content %}
 <section class="booking-page">
    <div class="container">
 
-
-       <div class="booking-gallery">
-           <div class="booking-gallery-main">
+       <!-- Gallery lên trên -->
+       <div class="detail-gallery booking-gallery">
+           <div class="gallery-big">
                {% if data.hotel_images %}
                    <img src="{{ url_for('static', filename=data.hotel_images[0]) }}" alt="{{ data.hotel.TenKhachSan }}">
                {% else %}
@@ -18,47 +16,44 @@
                {% endif %}
            </div>
 
-
-           <div class="booking-gallery-side">
-               {% for image in data.hotel_images[1:5] %}
-                   <div>
-                       <img src="{{ url_for('static', filename=image) }}" alt="{{ data.hotel.TenKhachSan }}">
+           <div class="gallery-small-grid">
+               {% for i in range(1, 5) %}
+                   <div class="gallery-small-item">
+                       {% if data.hotel_images and data.hotel_images|length > i %}
+                           <img src="{{ url_for('static', filename=data.hotel_images[i]) }}" alt="{{ data.hotel.TenKhachSan }}">
+                       {% else %}
+                           <div class="image-placeholder"></div>
+                       {% endif %}
                    </div>
                {% endfor %}
            </div>
        </div>
 
+       <!-- Tên khách sạn nằm dưới gallery -->
+       <div class="detail-title">
+           <h1>{{ data.hotel.TenKhachSan }}</h1>
+           <p>
+               <i class="fa-solid fa-location-dot"></i>
+               {{ data.hotel.DiaChi }}, {{ data.hotel.ThanhPho }}
+           </p>
+       </div>
 
        <div class="booking-layout">
            <main class="booking-main">
-               <div class="booking-hotel-title">
-                   <h1>{{ data.hotel.TenKhachSan }}</h1>
-                   <p>
-                       <i class="fa-solid fa-location-dot"></i>
-                       {{ data.hotel.DiaChi }}, {{ data.hotel.ThanhPho }}
-                   </p>
-               </div>
-
 
                <div class="booking-box">
                    <h2>Thông tin lưu trú</h2>
-
-
                    <div class="booking-info-grid">
                        <div>
                            <span>Nhận phòng</span>
                            <strong>{{ data.checkin }}</strong>
                            <small>Từ 14:00</small>
                        </div>
-
-
                        <div>
                            <span>Trả phòng</span>
                            <strong>{{ data.checkout }}</strong>
                            <small>Trước 12:00</small>
                        </div>
-
-
                        <div>
                            <span>Thời gian</span>
                            <strong>{{ data.so_dem }} đêm</strong>
@@ -66,35 +61,26 @@
                        </div>
                    </div>
 
-
                    <div class="room-booking-info">
                        <h3>{{ data.room.TenLoaiPhong }}</h3>
-
-
                        <div class="room-booking-meta">
                            <span><i class="fa-solid fa-user"></i> Tối đa {{ data.room.SoNguoiToiDa }} người</span>
                            <span><i class="fa-solid fa-bed"></i> Còn {{ data.so_phong_con_trong }} phòng</span>
                            {% if data.room.tien_ichs %}
                                {% for amenity in data.room.tien_ichs %}
                                    <span class="room-amenity-pill">
-                                       <i class="fa-solid fa-check"></i>
-                                       {{ amenity.TenTienIch }}
+                                       <i class="fa-solid fa-check"></i> {{ amenity.TenTienIch }}
                                    </span>
                                {% endfor %}
                            {% else %}
                                <span class="room-amenity-pill">Chưa có tiện ích</span>
                            {% endif %}
                        </div>
-
-
                        <p>{{ data.room.MoTa if data.room.MoTa else 'Chưa có mô tả loại phòng.' }}</p>
-
 
                        <div class="booking-room-gallery-wrapper">
                            <div class="booking-room-gallery-header">
                                <h4>Hình ảnh loại phòng</h4>
-
-
                                {% if data.room_images and data.room_images|length > 3 %}
                                    <div class="booking-room-gallery-nav">
                                        <button type="button" class="booking-room-gallery-btn" id="bookingRoomPrev">
@@ -106,7 +92,6 @@
                                    </div>
                                {% endif %}
                            </div>
-
 
                            {% if data.room_images %}
                                <div class="booking-room-gallery-viewport">
@@ -124,7 +109,6 @@
                        </div>
                    </div>
                </div>
-
 
                <div class="booking-box">
                    <h2>Chính sách & thông tin quan trọng</h2>
@@ -187,20 +171,15 @@
                <p class="service-fee-note">
                    Đã bao gồm phí dịch vụ {{ "{:,.0f}".format(data.phi_dich_vu) }}đ
                </p>
+               <form id="booking-form"
+                     action="{{ url_for('dat_phong', hotel_id=data.hotel.MaKhachSan, room_id=data.room.MaLoaiPhong, checkin=data.checkin, checkout=data.checkout, so_nguoi_lon=data.so_nguoi_lon, so_phong=data.so_phong) }}"
+                     method="POST">
+               </form>
 
+               <button type="submit" form="booking-form" class="btn-proceed-payment">
+                    Tiếp tục thanh toán
+               </button>
 
-               <a href="{{ url_for('thanh_toan_momo_theo_don', booking_id=data.booking.MaDatPhong) }}"
-                  class="btn-proceed-payment">
-                   Tiếp tục thanh toán
-               </a>
-               <div class="countdown-wrapper">
-                   <div class="countdown-label">Giữ phòng còn lại</div>
-                   <div id="bookingHoldCountdown"
-                        class="countdown-timer"
-                        data-booking-id="{{ data.booking.MaDatPhong }}">
-                       03:00
-                   </div>
-               </div>
            </div>
 
 

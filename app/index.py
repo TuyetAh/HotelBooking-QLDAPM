@@ -1,8 +1,12 @@
+import requests
 from flask import render_template, request, redirect, url_for, session, flash
 from functools import wraps
 from app import create_app
 import math
-from datetime import date, timedelta
+import hmac
+import hashlib
+import requests
+from datetime import date, timedelta, datetime
 from app.dao import (
     build_hotel_card_data,
     get_featured_hotels,
@@ -47,8 +51,22 @@ from app.dao import (
     cleanup_expired_pending_bookings,
     get_pending_booking_page_data,
     delete_expired_pending_booking,
-    create_pending_booking
+    create_pending_booking,
+    gui_otp_quen_mat_khau,
+    gui_otp_dang_ky,
+    kiem_tra_otp,
+    xoa_otp,
+    dat_lai_mat_khau,
+    generate_otp,
+    luu_otp,
+    create_pending_booking,
+    create_booking,
+    get_booking_by_code,
+    create_payment,
+    check_room_available_before_payment
 )
+from app.momo import create_momo_payment, verify_ipn_signature
+from flask import current_app
 from app.models import DatPhong
 
 
@@ -217,39 +235,11 @@ def chi_tiet_khach_san(hotel_id):
 
 # =========================================================
 # ĐĂNG KÝ
-# =========================================================
 @app.route("/dang-ky", methods=["GET", "POST"])
 def dang_ky():
-    if request.method == "POST":
-        ho_ten = request.form.get("fullname")
-        ten_dang_nhap = request.form.get("username")
-        mat_khau = request.form.get("password")
-        so_dien_thoai = request.form.get("phone")
-        email = request.form.get("email")
-        so_tai_khoan_ngan_hang = request.form.get("bank_account")
-
-        if not ho_ten or not ten_dang_nhap or not mat_khau or not so_dien_thoai or not email:
-            return render_template("DangKy.html",
-                                   err_msg="Vui lòng nhập đầy đủ các trường bắt buộc.")
-
-        success, result = register_user(
-            ten_dang_nhap=ten_dang_nhap,
-            mat_khau=mat_khau,
-            ho_ten=ho_ten,
-            so_dien_thoai=so_dien_thoai,
-            email=email,
-            so_tai_khoan_ngan_hang=so_tai_khoan_ngan_hang,
-            vai_tro=2
-        )
-
-        if success:
-            flash("Đăng ký tài khoản thành công. Bạn hãy đăng nhập nhé.", "success")
-            return redirect(url_for("dang_nhap"))
-        else:
-            return render_template("DangKy.html", err_msg=result)
-
-    return render_template("DangKy.html")
-
+    # GET: hiển thị form
+    # POST: giờ xử lý qua /dang-ky/gui-otp
+    return render_template("DangKy.html", step="form")
 # =========================================================
 # ĐĂNG NHẬP
 # =========================================================
@@ -442,6 +432,8 @@ def tao_khach_san():
         chinh_sach_huy = request.form.get("chinh_sach_huy", 0)
         ds_tien_ich = request.form.getlist("tien_ich")
 
+        files = request.files.getlist("hotel_images")
+
         if not ten_khach_san or not thanh_pho or not dia_chi or not so_dien_thoai_lien_he:
             return render_template("owner/TaoKhachSan.html",
                                    tien_ichs=tien_ichs,
@@ -457,7 +449,8 @@ def tao_khach_san():
             mo_ta=mo_ta,
             quy_dinh_khach_san=quy_dinh_khach_san,
             chinh_sach_huy=chinh_sach_huy,
-            ds_tien_ich=ds_tien_ich
+            ds_tien_ich=ds_tien_ich,
+            files=files
         )
 
         if success:
@@ -684,7 +677,7 @@ def huy_don_dat_phong_chu_ks(booking_id):
     success, message, hotel_id = cancel_booking_by_owner(booking_id)
 
     flash(message, "success" if success else "error")
-    return redirect(url_for("owner/QuanLyLoaiPhong.html"))
+    return redirect(url_for("quan_ly_loai_phong", hotel_id=hotel_id, tab="don-dat"))
 
 # =========================================================
 # QUẢN LÝ LOẠI PHÒNG CỦA KS, THÊM LP
@@ -792,51 +785,114 @@ def them_danh_gia_khach_san(hotel_id):
 # =========================================================
 # DẶT PHÒNG KS
 # =========================================================
-@app.route("/dat-phong/<int:hotel_id>/<int:room_id>")
-def dat_phong(hotel_id, room_id):
-   checkin = request.args.get("checkin", "").strip()
-   checkout = request.args.get("checkout", "").strip()
-   so_nguoi_lon = request.args.get("so_nguoi_lon", "2").strip()
-   so_phong = request.args.get("so_phong", "1").strip()
 
+@app.route("/dat_phong/<int:hotel_id>/<int:room_id>", methods=["GET", "POST"])
+@login_required
+def dat_phong(hotel_id, room_id):
+   checkin      = request.args.get("checkin", "").strip()
+   checkout     = request.args.get("checkout", "").strip()
+   so_nguoi_lon = request.args.get("so_nguoi_lon", "2").strip()
+   so_phong     = request.args.get("so_phong", "1").strip()
 
    if not checkin or not checkout:
        flash("Vui lòng chọn ngày nhận phòng và ngày trả phòng.", "error")
        return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
 
 
-   data = get_room_booking_data(
-       hotel_id=hotel_id,
-       room_id=room_id,
-       checkin=checkin,
-       checkout=checkout,
-       so_nguoi_lon=so_nguoi_lon,
-       so_phong=so_phong
-   )
-
+   data = get_room_booking_data(hotel_id, room_id, checkin, checkout, so_nguoi_lon, so_phong)
 
    if not data:
        flash("Không tìm thấy thông tin đặt phòng.", "error")
-       return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
-
-
+       return redirect(url_for("index"))
    if data["so_phong_con_trong"] < int(so_phong):
        flash("Loại phòng này không còn đủ số lượng phòng trống.", "error")
        return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
 
+   if request.method == "POST":
+       can_pay, message = check_room_available_before_payment(
+           hotel_id=hotel_id,
+           room_id=room_id,
+           checkin=checkin,
+           checkout=checkout,
+           so_nguoi_lon=so_nguoi_lon,
+           so_phong=so_phong
+       )
+
+       if not can_pay:
+           flash(message, "error")
+           return redirect(url_for(
+               "chi_tiet_khach_san",
+               hotel_id=hotel_id,
+               checkin=checkin,
+               checkout=checkout,
+               so_nguoi_lon=so_nguoi_lon,
+               so_phong=so_phong
+           ))
+
+       data = get_room_booking_data(
+           hotel_id,
+           room_id,
+           checkin,
+           checkout,
+           so_nguoi_lon,
+           so_phong
+       )
+       success, result = create_booking(
+           user_id=session.get("user_id"),
+           hotel_id=hotel_id,
+           room_id=room_id,
+           checkin=checkin,
+           checkout=checkout,
+           so_nguoi_lon=so_nguoi_lon,
+           so_phong=so_phong,
+           tong_tien=data["tong_tien"]
+       )
+
+       if not success:
+           flash(result, "error")
+           return redirect(request.url)
+
+
+       booking = result
+       base_url = current_app.config["BASE_URL"]
+       redirect_url = f"{base_url}/momo/return"
+       ipn_url      = f"{base_url}/momo/ipn"
+       order_info   = f"Dat phong {booking.MaDatPhongCode}"
+
+
+       momo_resp = create_momo_payment(
+           booking_code=booking.MaDatPhongCode,
+           amount=int(data["tong_tien"]),
+           order_info=order_info,
+           redirect_url=redirect_url,
+           ipn_url=ipn_url
+       )
+
+
+       if momo_resp.get("resultCode") == 0:
+           return redirect(momo_resp["payUrl"])
+
+
+       flash(f"Lỗi MoMo: {momo_resp.get('message', 'Không xác định')}", "error")
+       return redirect(request.url)
+
 
    return render_template("DatPhong.html", data=data)
+
 # =========================================================
 # TẠO ĐƠN TẠM
 # =========================================================
 @app.route("/dat-phong/khoi-tao/<int:hotel_id>/<int:room_id>")
 @login_required
 def khoi_tao_dat_phong(hotel_id, room_id):
-   checkin = request.args.get("checkin")
-   checkout = request.args.get("checkout")
+   checkin = request.args.get("checkin", "").strip()
+   checkout = request.args.get("checkout", "").strip()
    so_nguoi_lon = request.args.get("so_nguoi_lon", "1")
    so_phong = request.args.get("so_phong", "1")
 
+   if not checkin or not checkout:
+       flash("Vui lòng chọn ngày nhận phòng và ngày trả phòng trước khi chọn phòng.", "error")
+       return redirect(url_for("chi_tiet_khach_san", hotel_id=hotel_id))
 
    user_id = session.get("user_id")
 
@@ -858,19 +914,12 @@ def khoi_tao_dat_phong(hotel_id, room_id):
 
 
    booking_id = result
-
-
-   print("REDIRECT SANG BOOKING ID:", booking_id)
-
-
    return redirect(url_for("dat_phong_theo_don", booking_id=booking_id))
 
 
 @app.route("/dat-phong/<int:booking_id>")
 @login_required
 def dat_phong_theo_don(booking_id):
-   print("ĐANG MỞ TRANG ĐẶT PHÒNG ID:", booking_id)
-
 
    data = get_pending_booking_page_data(
        booking_id=booking_id,
@@ -907,145 +956,10 @@ def het_han_giu_phong(booking_id):
 
    return redirect(url_for("index"))
 
-
-# =========================================================
-# THANH TOÁN
-# =========================================================
-@app.route("/thanh-toan/momo/<int:booking_id>")
-@login_required
-def thanh_toan_momo_theo_don(booking_id):
-    data = get_pending_booking_page_data(booking_id, session.get("user_id"))
-
-    if not data:
-        flash("Không tìm thấy đơn thanh toán.", "error")
-        return redirect(url_for("index"))
-
-    booking = data["booking"]
-
-    if booking.TrangThaiDatPhong != 0:
-        flash("Đơn này không còn chờ thanh toán.", "error")
-        return redirect(url_for("index"))
-
-    amount = int(booking.TongTien)
-    order_id = booking.MaDatPhongCode
-    request_id = f"{order_id}_{int(datetime.now().timestamp())}"
-    order_info = f"Thanh toán đặt phòng {order_id}"
-
-    redirect_url = url_for("momo_return", _external=True)
-    ipn_url = url_for("momo_ipn", _external=True)
-
-    request_type = "captureWallet"
-    extra_data = ""
-
-    raw_signature = (
-        f"accessKey={MOMO_ACCESS_KEY}"
-        f"&amount={amount}"
-        f"&extraData={extra_data}"
-        f"&ipnUrl={ipn_url}"
-        f"&orderId={order_id}"
-        f"&orderInfo={order_info}"
-        f"&partnerCode={MOMO_PARTNER_CODE}"
-        f"&redirectUrl={redirect_url}"
-        f"&requestId={request_id}"
-        f"&requestType={request_type}"
-    )
-
-    signature = hmac.new(
-        MOMO_SECRET_KEY.encode("utf-8"),
-        raw_signature.encode("utf-8"),
-        hashlib.sha256
-    ).hexdigest()
-
-    payload = {
-        "partnerCode": MOMO_PARTNER_CODE,
-        "partnerName": "Hotel Booking",
-        "storeId": "HotelBookingStore",
-        "requestId": request_id,
-        "amount": amount,
-        "orderId": order_id,
-        "orderInfo": order_info,
-        "redirectUrl": redirect_url,
-        "ipnUrl": ipn_url,
-        "lang": "vi",
-        "extraData": extra_data,
-        "requestType": request_type,
-        "signature": signature
-    }
-
-    res = requests.post(MOMO_ENDPOINT, json=payload, timeout=30)
-    momo_data = res.json()
-
-    if momo_data.get("resultCode") != 0:
-        flash("Không tạo được thanh toán MoMo: " + momo_data.get("message", ""), "error")
-        return redirect(url_for("dat_phong_theo_don", booking_id=booking_id))
-
-    return redirect(momo_data["payUrl"])
-
-@app.route("/momo/return")
-def momo_return():
-    result_code = request.args.get("resultCode")
-    order_id = request.args.get("orderId")
-    trans_id = request.args.get("transId")
-
-    booking = DatPhong.query.filter_by(MaDatPhongCode=order_id).first()
-
-    if not booking:
-        flash("Không tìm thấy đơn thanh toán.", "error")
-        return redirect(url_for("index"))
-
-    if result_code == "0":
-        booking.TrangThaiDatPhong = 1
-
-        payment = ThanhToan.query.filter_by(MaDatPhong=booking.MaDatPhong).first()
-        if not payment:
-            payment = ThanhToan(MaDatPhong=booking.MaDatPhong)
-
-        payment.PhuongThucThanhToan = "MoMo"
-        payment.MaGiaoDich = str(trans_id)
-        payment.TrangThaiThanhToan = 1
-        payment.ThoiGianThanhToan = datetime.now()
-
-        db.session.add(payment)
-        db.session.commit()
-
-        flash("Thanh toán thành công.", "success")
-    else:
-        flash("Thanh toán chưa thành công hoặc đã bị hủy.", "error")
-
-    return redirect(url_for("chi_tiet_khach_san", hotel_id=booking.MaKhachSan))
-
-@app.route("/momo/ipn", methods=["POST"])
-def momo_ipn():
-    data = request.get_json()
-
-    order_id = data.get("orderId")
-    result_code = data.get("resultCode")
-    trans_id = data.get("transId")
-
-    booking = DatPhong.query.filter_by(MaDatPhongCode=order_id).first()
-
-    if booking and result_code == 0:
-        booking.TrangThaiDatPhong = 1
-
-        payment = ThanhToan.query.filter_by(MaDatPhong=booking.MaDatPhong).first()
-        if not payment:
-            payment = ThanhToan(MaDatPhong=booking.MaDatPhong)
-
-        payment.PhuongThucThanhToan = "MoMo"
-        payment.MaGiaoDich = str(trans_id)
-        payment.TrangThaiThanhToan = 1
-        payment.ThoiGianThanhToan = datetime.now()
-
-        db.session.add(payment)
-        db.session.commit()
-
-    return {"message": "success"}, 200
-
-
-# =========================================================
-
-# CHỈNH SỬA THÔNG TIN CƠ BẢN KHÁCH SẠN
-# =========================================================
+# # =========================================================
+#
+# # CHỈNH SỬA THÔNG TIN CƠ BẢN KHÁCH SẠN
+# # =========================================================
 @app.route("/quan-ly/khach-san/<int:hotel_id>/chinh-sua", methods=["POST"])
 @owner_required
 def chinh_sua_khach_san(hotel_id):
@@ -1114,18 +1028,397 @@ def huy_don_khach_hang(booking_id):
 
     flash(message, "success" if success else "error")
     return redirect(url_for("chi_tiet_don_khach_hang", booking_id=booking_id))
-
-import hmac
-import hashlib
-import json
-import requests
-from datetime import datetime
+#
 
 MOMO_ENDPOINT = "https://test-payment.momo.vn/v2/gateway/api/create"
-
 MOMO_PARTNER_CODE = "MOMOBKUN20180529"
 MOMO_ACCESS_KEY = "F9A2..."
 MOMO_SECRET_KEY = "S8K..."
+
+
+# =========================================================
+# THANH TOÁN MOMO
+# =========================================================
+@app.route("/thanh-toan/momo/<int:booking_id>")
+@login_required
+def thanh_toan_momo_theo_don(booking_id):
+    data = get_pending_booking_page_data(booking_id, session.get("user_id"))
+
+    if not data:
+        flash("Không tìm thấy đơn thanh toán.", "error")
+        return redirect(url_for("index"))
+
+    booking = data["booking"]
+
+    if booking.TrangThaiDatPhong != 0:
+        flash("Đơn này không còn chờ thanh toán.", "error")
+        return redirect(url_for("index"))
+
+    amount = int(booking.TongTien)
+    order_id = booking.MaDatPhongCode
+    request_id = f"{order_id}_{int(datetime.now().timestamp())}"
+    order_info = f"Thanh toán đặt phòng {order_id}"
+
+    # Sử dụng BASE_URL từ config (ngrok)
+    base_url = app.config["BASE_URL"]
+    redirect_url = f"{base_url}/momo/return"
+    ipn_url = f"{base_url}/momo/ipn"
+
+    request_type = "captureWallet"
+    extra_data = ""
+
+    raw_signature = (
+        f"accessKey={MOMO_ACCESS_KEY}"
+        f"&amount={amount}"
+        f"&extraData={extra_data}"
+        f"&ipnUrl={ipn_url}"
+        f"&orderId={order_id}"
+        f"&orderInfo={order_info}"
+        f"&partnerCode={MOMO_PARTNER_CODE}"
+        f"&redirectUrl={redirect_url}"
+        f"&requestId={request_id}"
+        f"&requestType={request_type}"
+    )
+
+    signature = hmac.new(
+        MOMO_SECRET_KEY.encode("utf-8"),
+        raw_signature.encode("utf-8"),
+        hashlib.sha256
+    ).hexdigest()
+
+    payload = {
+        "partnerCode": MOMO_PARTNER_CODE,
+        "partnerName": "Hotel Booking",
+        "storeId": "HotelBookingStore",
+        "requestId": request_id,
+        "amount": amount,
+        "orderId": order_id,
+        "orderInfo": order_info,
+        "redirectUrl": redirect_url,
+        "ipnUrl": ipn_url,
+        "lang": "vi",
+        "extraData": extra_data,
+        "requestType": request_type,
+        "signature": signature
+    }
+
+    res = requests.post(MOMO_ENDPOINT, json=payload, timeout=30)
+    momo_data = res.json()
+
+    if momo_data.get("resultCode") != 0:
+        flash("Không tạo được thanh toán MoMo: " + momo_data.get("message", ""), "error")
+        return redirect(url_for("dat_phong_theo_don", booking_id=booking_id))
+
+    return redirect(momo_data["payUrl"])
+
+
+# =========================================================
+# MOMO RETURN — Sau khi thanh toán xong
+# =========================================================
+@app.route("/momo/return")
+def momo_return():
+    result_code = request.args.get("resultCode", "-1")
+    order_id = request.args.get("orderId", "")
+    amount = request.args.get("amount", "0")
+    message = request.args.get("message", "")
+
+    booking = get_booking_by_code(order_id)
+    success = result_code == "0"
+
+    if success and booking:
+        flash("Thanh toán thành công! Cảm ơn bạn đã đặt phòng.", "success")
+        # Chuyển sang trang chi tiết đơn đẹp
+        return redirect(url_for("chi_tiet_don_khach_hang", booking_id=booking.MaDatPhong))
+
+    # Trường hợp thất bại
+    return render_template("MomoReturn.html",
+                           success=success,
+                           booking=booking,
+                           amount=int(amount) if amount.isdigit() else 0,
+                           message=message)
+
+
+# =========================================================
+# MOMO IPN — MoMo gọi backend
+# =========================================================
+@app.route("/momo/ipn", methods=["POST"])
+def momo_ipn():
+    data = request.get_json(force=True) or {}
+
+    if not verify_ipn_signature(data):
+        return {"resultCode": 1, "message": "Invalid signature"}, 400
+
+    order_id = data.get("orderId", "")
+    result_code = int(data.get("resultCode", -1))
+    trans_id = str(data.get("transId", ""))
+    amount = data.get("amount", 0)
+
+    booking = get_booking_by_code(order_id)
+    if not booking:
+        return {"resultCode": 1, "message": "Booking not found"}, 404
+
+    if result_code == 0:
+        create_payment(
+            ma_dat_phong=booking.MaDatPhong,
+            phuong_thuc_thanh_toan="MoMo",
+            trang_thai_thanh_toan=1,
+            so_tien_thanh_toan=amount,
+            ma_giao_dich=trans_id,
+            thoi_gian_thanh_toan=date.today()
+        )
+    else:
+        create_payment(
+            ma_dat_phong=booking.MaDatPhong,
+            phuong_thuc_thanh_toan="MoMo",
+            trang_thai_thanh_toan=2,
+            so_tien_thanh_toan=amount,
+            ma_giao_dich=trans_id
+        )
+
+    return {"resultCode": 0, "message": "Confirmed"}, 200
+
+# =========================================================
+# =========================================================
+@app.route("/xac-nhan-otp-mat-khau", methods=["POST"])
+def xac_nhan_otp_mat_khau():
+    email = session.get("reset_email")
+    if not email:
+        return redirect(url_for("quen_mat_khau"))
+
+    otp_nhap = request.form.get("otp", "").strip()
+    ok, msg = kiem_tra_otp(email, otp_nhap, loai="quen_mat_khau")
+    if not ok:
+        return render_template("QuenMatKhau.html",
+                                step="otp", err_msg=msg,
+                                success_msg=f"Mã đã gửi về {email}")
+
+    session["reset_verified"] = True
+    return render_template("QuenMatKhau.html", step="new_password")
+
+
+
+
+# =========================================================
+# ĐĂNG KÝ — Bước 1: gửi OTP
+# =========================================================
+@app.route("/dang-ky/gui-otp", methods=["POST"])
+def dang_ky_gui_otp():
+    email = request.form.get("email", "").strip()
+    ho_ten = request.form.get("fullname", "").strip()
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "").strip()
+    phone = request.form.get("phone", "").strip()
+    bank_account = request.form.get("bank_account", "").strip()
+
+    if not ho_ten or not username or not password or not phone or not email:
+        return render_template("DangKy.html",
+                               step="form",
+                               err_msg="Vui lòng nhập đầy đủ các trường bắt buộc.",
+                               form_data=request.form)
+
+    # Kiểm tra trùng trước khi gửi mail
+    from app.dao import get_user_by_username, get_user_by_email
+    if get_user_by_username(username):
+        return render_template("DangKy.html",
+                               step="form",
+                               err_msg="Tên đăng nhập đã tồn tại.",
+                               form_data=request.form)
+    if get_user_by_email(email):
+        return render_template("DangKy.html",
+                               step="form",
+                               err_msg="Email đã được sử dụng.",
+                               form_data=request.form)
+
+    success, msg = gui_otp_dang_ky(email, ho_ten)
+    if not success:
+        return render_template("DangKy.html",
+                               step="form",
+                               err_msg=msg,
+                               form_data=request.form)
+
+    # Lưu tạm thông tin vào session
+    session["pending_register"] = {
+        "fullname": ho_ten,
+        "username": username,
+        "password": password,
+        "phone": phone,
+        "email": email,
+        "bank_account": bank_account
+    }
+
+    return render_template("DangKy.html",
+                            step="otp",
+                            success_msg=f"Đã gửi mã xác nhận về {email}")
+
+
+# =========================================================
+# ĐĂNG KÝ — Bước 2: xác nhận OTP + tạo tài khoản
+# =========================================================
+@app.route("/dang-ky/xac-nhan-otp", methods=["POST"])
+def dang_ky_xac_nhan_otp():
+    pending = session.get("pending_register")
+    if not pending:
+        return redirect(url_for("dang_ky"))
+
+    otp_nhap = request.form.get("otp", "").strip()
+    ok, msg = kiem_tra_otp(pending["email"], otp_nhap, loai="dang_ky")
+
+    if not ok:
+        return render_template("DangKy.html",
+                                step="otp",
+                                err_msg=msg,
+                                success_msg=f"Mã đã gửi về {pending['email']}")
+
+    success, result = register_user(
+        ten_dang_nhap=pending["username"],
+        mat_khau=pending["password"],
+        ho_ten=pending["fullname"],
+        so_dien_thoai=pending["phone"],
+        email=pending["email"],
+        so_tai_khoan_ngan_hang=pending["bank_account"],
+        vai_tro=2
+    )
+
+    xoa_otp(pending["email"], loai="dang_ky")
+    session.pop("pending_register", None)
+
+    if success:
+        flash("Đăng ký tài khoản thành công! Vui lòng đăng nhập.", "success")
+        return redirect(url_for("dang_nhap"))
+
+    return render_template("DangKy.html",
+                            step="form", err_msg=result)
+@app.route("/quen-mat-khau", methods=["GET", "POST"])
+def quen_mat_khau():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip()
+        if not email:
+            return render_template("QuenMatKhau.html",
+                                   step="email", err_msg="Vui lòng nhập email.")
+
+        success, msg = gui_otp_quen_mat_khau(email)
+        if not success:
+            return render_template("QuenMatKhau.html",
+                                   step="email", err_msg=msg)
+
+        session["reset_email"] = email
+        return render_template("QuenMatKhau.html",
+                                step="otp",
+                                success_msg=f"Đã gửi mã xác nhận về {email}")
+    return render_template("QuenMatKhau.html", step="email")
+# =========================================================
+# QUÊN MẬT KHẨU — Bước 3: đặt mật khẩu mới
+# =========================================================
+@app.route("/dat-lai-mat-khau", methods=["POST"])
+def dat_lai_mat_khau_route():
+    email = session.get("reset_email")
+    verified = session.get("reset_verified")
+
+    if not email or not verified:
+        return redirect(url_for("quen_mat_khau"))
+
+    mat_khau_moi = request.form.get("mat_khau_moi", "")
+    xac_nhan = request.form.get("xac_nhan_mat_khau", "")
+
+    if len(mat_khau_moi) < 6:
+        return render_template("QuenMatKhau.html",
+                                step="new_password",
+                                err_msg="Mật khẩu phải có ít nhất 6 ký tự.")
+    if mat_khau_moi != xac_nhan:
+        return render_template("QuenMatKhau.html",
+                                step="new_password",
+                                err_msg="Mật khẩu xác nhận không khớp.")
+
+    success, msg = dat_lai_mat_khau(email, mat_khau_moi)
+    if not success:
+        return render_template("QuenMatKhau.html",
+                                step="new_password", err_msg=msg)
+
+    xoa_otp(email, loai="quen_mat_khau")
+    session.pop("reset_email", None)
+    session.pop("reset_verified", None)
+
+    flash("Đặt lại mật khẩu thành công! Vui lòng đăng nhập.", "success")
+    return redirect(url_for("dang_nhap"))
+
+
+## Edit thong tin khach san
+@app.route("/quan-ly/khach-san/<int:hotel_id>/them-anh", methods=["POST"])
+@owner_required
+def them_anh_khach_san(hotel_id):
+    from flask import jsonify
+    user_id = session.get("user_id")
+    if not is_hotel_belong_to_owner(hotel_id, user_id):
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "message": "Không có quyền."}), 403
+        flash("Bạn không có quyền thao tác với khách sạn này.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+
+    files = request.files.getlist("hotel_images")
+    if not files or files[0].filename == "":
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "message": "Vui lòng chọn ít nhất một ảnh."}), 400
+        flash("Vui lòng chọn ít nhất một ảnh.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+
+    from app.dao import save_hotel_images, cap_nhat_thu_muc_anh_khach_san
+    thu_muc_anh = save_hotel_images(hotel_id, files)
+
+    hotel = get_hotel_by_id(hotel_id)
+    if hotel and not hotel.ThuMucAnh and thu_muc_anh:
+        cap_nhat_thu_muc_anh_khach_san(hotel_id, thu_muc_anh)
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "message": "Thêm ảnh thành công."}), 200
+
+    flash("Thêm ảnh thành công.", "success")
+    return redirect(url_for("chu_khach_san_dashboard"))
+
+
+@app.route("/quan-ly/khach-san/<int:hotel_id>/xoa-anh", methods=["POST"])
+@owner_required
+def xoa_anh_khach_san(hotel_id):
+    user_id = session.get("user_id")
+    if not is_hotel_belong_to_owner(hotel_id, user_id):
+        flash("Bạn không có quyền thao tác với khách sạn này.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+
+    filename = request.form.get("filename")
+    hotel = get_hotel_by_id(hotel_id)
+
+    if not hotel or not hotel.ThuMucAnh:
+        flash("Không tìm thấy thư mục ảnh.", "error")
+        return redirect(url_for("chu_khach_san_dashboard"))
+
+    from app.dao import delete_room_image  # hàm này dùng được cho cả KS
+    success, message = delete_room_image(hotel.ThuMucAnh, filename)
+    flash(message, "success" if success else "error")
+    return redirect(url_for("chu_khach_san_dashboard"))
+
+@app.route("/quan-ly/khach-san/<int:hotel_id>/danh-sach-anh")
+@owner_required
+def danh_sach_anh_khach_san(hotel_id):
+    from flask import jsonify
+    user_id = session.get("user_id")
+    if not is_hotel_belong_to_owner(hotel_id, user_id):
+        return jsonify({"images": []}), 403
+
+    hotel = get_hotel_by_id(hotel_id)
+    if not hotel or not hotel.ThuMucAnh:
+        return jsonify({"images": []}), 200
+
+    from app.dao import get_room_image_list
+    images = get_room_image_list(hotel.ThuMucAnh)
+    # get_room_image_list trả về [{"filename": "1.jpg", "url": "images/..."}]
+    # renderImages trong JS dùng item.path và item.filename
+    # nên cần map lại: path = url (bỏ prefix "images/")
+    result = []
+    for img in images:
+        result.append({
+            "filename": img["filename"],
+            "path": img["url"]   # url đã có dạng "images/khachsan/ks_1/1.jpg"
+        })
+    return jsonify({"images": result}), 200
 
 if __name__ == "__main__":
     app.run(debug=True)
